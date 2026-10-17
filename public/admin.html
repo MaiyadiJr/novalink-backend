@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovaLink Admin - Cash Vouchers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; font-family: -apple-system, sans-serif; }
+        .card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .voucher-ticket { border: 2px dashed #0d6efd; background: #f0f7ff; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 12px; }
+        .voucher-code { font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #0d6efd; margin: 8px 0; }
+        @media print {
+            body * { visibility: hidden; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="p-3 p-md-5">
+    <div class="container" style="max-width: 800px;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>⚡ NovaLink Admin Panel</h2>
+            <span class="badge bg-success">Connected</span>
+        </div>
+
+        <div class="card p-4 mb-4" id="authCard">
+            <h5>Admin Authentication</h5>
+            <div class="input-group mt-2">
+                <input type="password" id="adminPin" class="form-control" placeholder="Enter Admin PIN">
+                <button class="btn btn-primary" onclick="login()">Unlock Panel</button>
+            </div>
+        </div>
+
+        <div id="mainDashboard" class="d-none">
+            <div class="card p-4 mb-4">
+                <h5>Generate Cash Vouchers</h5>
+                <form onsubmit="generateVouchers(event)">
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="form-label">Package Profile</label>
+                            <select id="pkgSelect" class="form-select" required>
+                                <option value="1-Hour-2Mbps">1 Hour Pass (₦100)</option>
+                                <option value="24-Hours-5Mbps" selected>24 Hours Pass (₦500)</option>
+                                <option value="7-Days-5Mbps">7 Days Pass (₦2,500)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" id="qtyInput" class="form-control" value="1" min="1" max="50" required>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <button type="submit" class="btn btn-success w-100 fw-bold py-2">⚡ Generate Vouchers</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card p-4 d-none" id="vouchersOutputCard">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="m-0">Generated Slips</h5>
+                    <button class="btn btn-outline-dark btn-sm" onclick="window.print()">🖨️ Print</button>
+                </div>
+                <div id="printableArea" class="row"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPin = '';
+        const bridgeUrl = "https://novavendonrender.com";
+
+        function login() {
+            currentPin = document.getElementById('adminPin').value;
+            if(!currentPin) return alert("Please enter PIN");
+            document.getElementById('authCard').classList.add('d-none');
+            document.getElementById('mainDashboard').classList.remove('d-none');
+        }
+
+        async function generateVouchers(e) {
+            e.preventDefault();
+            const pkg = document.getElementById('pkgSelect').value;
+            const qty = document.getElementById('qtyInput').value;
+
+            try {
+                const res = await fetch(`${bridgeUrl}/api/admin/generate-vouchers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: currentPin, package: pkg, quantity: qty })
+                });
+
+                const data = await res.json();
+                if(data.success) {
+                    renderVouchers(data.vouchers);
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (err) {
+                alert("Failed to connect to payment bridge.");
+            }
+        }
+
+        function renderVouchers(vouchers) {
+            const container = document.getElementById('printableArea');
+            container.innerHTML = '';
+
+            vouchers.forEach(v => {
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-4';
+                col.innerHTML = `
+                    <div class="voucher-ticket">
+                        <small class="text-muted d-block">NOVALINK WI-FI</small>
+                        <div class="voucher-code">${v.code}</div>
+                        <div class="fw-bold text-dark">₦${v.price}</div>
+                        <small class="text-secondary">${v.profile}</small>
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+
+            document.getElementById('vouchersOutputCard').classList.remove('d-none');
+        }
+    </script>
+</body>
+</html>

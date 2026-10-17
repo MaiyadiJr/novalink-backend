@@ -9,6 +9,7 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.static('public'));
 
 // HTTPS Agent for RouterOS REST API self-signed SSL certificates
 const mikrotikAgent = new https.Agent({

@@ -21,7 +21,7 @@ app.use(cors());
 // Configuration Settings from Environment Variables
 const CONFIG = {
     PORT: process.env.PORT || 3000,
-    PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || // <-- REPLACE or set in Render Env
+    //PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || // <-- REPLACE or set in Render Env
     MIKROTIK_HOST= process.env.MIKROTIK_HOST || 'hmp0bd9vwcq.sn.mynetname.net',                           // <-- REPLACE or set in Render Env
     MIKROTIK_PORT= process.env.MIKROTIK_PORT || 443,
     MIKROTIK_USER= process.env.MIKROTIK_USER || 'admin',                                             // <-- REPLACE or set in Render Env

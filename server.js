@@ -22,11 +22,11 @@ app.use(cors());
 const CONFIG = {
     PORT: process.env.PORT || 3000,
     //PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || // <-- REPLACE or set in Render Env
-    MIKROTIK_HOST= process.env.MIKROTIK_HOST || 'hmp0bd9vwcq.sn.mynetname.net',                           // <-- REPLACE or set in Render Env
-    MIKROTIK_PORT= process.env.MIKROTIK_PORT || 443,
-    MIKROTIK_USER= process.env.MIKROTIK_USER || 'admin',                                             // <-- REPLACE or set in Render Env
-    MIKROTIK_PASS= process.env.MIKROTIK_PASS || 'Nova@1234',                              // <-- REPLACE or set in Render Env
-    ADMIN_PIN= process.env.ADMIN_PIN || '5678'                                                       // <-- Set your Admin PIN here
+    //MIKROTIK_HOST= process.env.MIKROTIK_HOST || 'hmp0bd9vwcq.sn.mynetname.net',                           // <-- REPLACE or set in Render Env
+    //MIKROTIK_PORT= process.env.MIKROTIK_PORT || 443,
+    //MIKROTIK_USER= process.env.MIKROTIK_USER || 'admin',                                             // <-- REPLACE or set in Render Env
+    //MIKROTIK_PASS= process.env.MIKROTIK_PASS || 'Nova@1234',                              // <-- REPLACE or set in Render Env
+    //ADMIN_PIN= process.env.ADMIN_PIN || '5678'                                                       // <-- Set your Admin PIN here
 };
 
 // HTTPS Agent to communicate with MikroTik REST API (ignoring self-signed SSL certs)

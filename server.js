@@ -84,7 +84,7 @@ app.post('/api/initialize-payment', async (req, res) => {
             'https://api.paystack.co/transaction/initialize',
             {
                 amount: amount * 100, // Paystack expects amount in Kobo
-                email: `customer_${Date.now()}@novalink.wifi`,
+                email: `customer_${Date.now()}@novalink.com`,
                 reference: reference,
                 metadata: {
                     package: pkg,

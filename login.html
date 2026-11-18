@@ -225,7 +225,7 @@ $(endif)
 
             let handler = PaystackPop.setup({
                 key: LIVE_PAYSTACK_KEY,
-                email: `user_${Date.now()}@novalink.wifi`,
+                email: `customer_${Date.now()}@novalink.com`,
                 amount: amount * 100,
                 ref: data.reference,
                 callback: function(response) {

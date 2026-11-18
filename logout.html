@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disconnected - NovaLink</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: #1e293b;
+            padding: 32px 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid #334155;
+        }
+        .icon-circle {
+            width: 64px;
+            height: 64px;
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            font-size: 28px;
+        }
+        h2 { margin: 0 0 8px; color: #f8fafc; font-size: 22px; }
+        p { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+        .stats-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: left;
+            margin-bottom: 24px;
+            font-size: 13px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #1e293b;
+        }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: #64748b; }
+        .stat-val { color: #e2e8f0; font-weight: 600; }
+        .btn-reconnect {
+            display: block;
+            width: 100%;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-reconnect:hover { background: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon-circle">⏹</div>
+        <h2>Disconnected</h2>
+        <p>Your NovaLink internet session has ended.</p>
+        
+        <div class="stats-card">
+            <div class="stat-row">
+                <span class="stat-label">User / Voucher</span>
+                <span class="stat-val">$(username)</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">IP Address</span>
+                <span class="stat-val">$(ip)</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Total Time Connected</span>
+                <span class="stat-val">$(uptime)</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Data Transferred</span>
+                <span class="stat-val">$(bytes-nice)</span>
+            </div>
+        </div>
+
+        <form action="$(link-login)" method="get">
+            <button type="submit" class="btn-reconnect">Log Back In</button>
+        </form>
+    </div>
+</body>
+</html>

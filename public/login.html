@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovaLink - High-Speed Internet Access</title>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <style>
+        body {
+            background-color: #0d1117 !important;
+            color: #c9d1d9 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 440px;
+            background: #161b22 !important;
+            border: 1px solid #30363d !important;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+        .logo {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff !important;
+            margin-bottom: 24px;
+            letter-spacing: 1px;
+        }
+        .logo span { color: #58a6ff; }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+            text-align: center;
+        }
+        .alert.error { background: #f851491a; border: 1px solid #f85149; color: #ff7b72; display: block; }
+        .alert.success { background: #2386361a; border: 1px solid #238636; color: #3fb950; display: block; }
+        .section-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #8b949e;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .plans-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .plan-card {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+        .plan-card:hover { border-color: #58a6ff; transform: translateY(-2px); }
+        .plan-name { font-weight: 600; font-size: 14px; color: #fff; margin-bottom: 4px; }
+        .plan-price { font-size: 15px; font-weight: 700; color: #3fb950; }
+        .divider {
+            text-align: center;
+            border-bottom: 1px solid #30363d;
+            line-height: 0.1em;
+            margin: 24px 0;
+        }
+        .divider span { background: #161b22; padding: 0 10px; color: #8b949e; font-size: 12px; text-transform: uppercase; }
+        .form-group { margin-bottom: 16px; }
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+        .form-control:focus { border-color: #58a6ff; }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #238636;
+            color: #fff;
+        }
+        .btn:hover { background: #2ea043; }
+        .loading-overlay { display: none; text-align: center; padding: 20px; }
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #58a6ff;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo">NOVA<span>LINK</span></div>
+
+    <div id="alert-box" class="alert"></div>
+
+    <div id="main-view">
+        <div class="section-title">Instant Online Access</div>
+        <div class="plans-grid">
+            <div class="plan-card" onclick="initPaystack('1-Hour-3Mbps', 100)">
+                <div class="plan-name">1 Hour Pass</div>
+                <div class="plan-price">NGN 100</div>
+            </div>
+            <div class="plan-card" onclick="initPaystack('24-Hours-5Mbps', 200)">
+                <div class="plan-name">24 Hours Pass</div>
+                <div class="plan-price">NGN 200</div>
+            </div>
+            <div class="plan-card" onclick="initPaystack('7-Days-5Mbps', 1200)">
+                <div class="plan-name">7 Days Pass</div>
+                <div class="plan-price">NGN 1,200</div>
+            </div>
+            <div class="plan-card" onclick="initPaystack('1-Month-5Mbps', 3000)">
+                <div class="plan-name">1 Month Pass</div>
+                <div class="plan-price">NGN 3,000</div>
+            </div>
+        </div>
+
+        <div class="divider"><span>Or Voucher Code</span></div>
+
+        <form name="login" action="$(link-login)" method="post" $(if chap-id)onSubmit="return doLogin()"$(endif)>
+            <input type="hidden" name="username" id="router-username">
+            <input type="hidden" name="password" id="router-password">
+            <input type="hidden" name="dst" value="$(link-orig)">
+            <input type="hidden" name="popup" value="true">
+
+            <div class="form-group">
+                <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code (e.g. NV-XXXX)" autocomplete="off">
+            </div>
+            <button type="button" class="btn" onclick="submitVoucher()">Connect to Internet</button>
+        </form>
+    </div>
+
+    <div id="loading-view" class="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text" style="font-weight: 500; font-size: 14px; color: #c9d1d9;">Processing payment... Please wait.</div>
+    </div>
+</div>
+
+$(if chap-id)
+<script type="text/javascript" src="/md5.js"></script>
+<script type="text/javascript">
+    function doLogin() {
+        document.login.password.value = hexMD5('$(chap-id)' + document.getElementById('router-password').value + '$(chap-challenge)');
+        return true;
+    }
+</script>
+$(endif)
+
+<script>
+    const RENDER_BACKEND_URL = "https://novalink-backend-uyja.onrender.com";
+    const LIVE_PAYSTACK_KEY = "pk_live_ab9b1227fa13a8ea813843f6975ba59426220265";
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        if (error) {
+            showAlert("Invalid Voucher or Authentication Failed. Please try again.", "error");
+        }
+    };
+
+    function showAlert(message, type) {
+        const box = document.getElementById('alert-box');
+        box.className = `alert ${type}`;
+        box.innerText = message;
+    }
+
+    function submitVoucher() {
+        const code = document.getElementById('voucher-input').value.trim();
+        if (!code) {
+            showAlert("Please enter a valid voucher code.", "error");
+            return;
+        }
+        document.getElementById('router-username').value = code;
+        document.getElementById('router-password').value = code;
+
+        if (typeof doLogin === 'function') {
+            try { doLogin(); } catch(e) {}
+        }
+        document.login.submit();
+    }
+
+    function initPaystack(pkgKey, amount) {
+        showAlert("", "clear");
+        document.getElementById('main-view').style.display = 'none';
+        document.getElementById('loading-view').style.display = 'block';
+        document.getElementById('loading-text').innerText = "Opening payment window...";
+
+        const reference = `NV_REF_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        try {
+            let handler = PaystackPop.setup({
+                key: LIVE_PAYSTACK_KEY,
+                email: `customer_${Date.now()}@novalink.com`,
+                amount: amount * 100,
+                ref: reference,
+                metadata: {
+                    package: pkgKey,
+                    mac: "$(mac)"
+                },
+                callback: function(response) {
+                    document.getElementById('loading-text').innerText = "Payment complete! Generating your voucher...";
+                    pollForVoucher(response.reference);
+                },
+                onClose: function() {
+                    document.getElementById('main-view').style.display = 'block';
+                    document.getElementById('loading-view').style.display = 'none';
+                    showAlert("Payment window closed.", "error");
+                }
+            });
+            handler.openIframe();
+
+        } catch (err) {
+            document.getElementById('main-view').style.display = 'block';
+            document.getElementById('loading-view').style.display = 'none';
+            showAlert("Error connecting to payment gateway: " + err.message, "error");
+        }
+    }
+
+    async function pollForVoucher(reference) {
+        let attempts = 0;
+        const maxAttempts = 30; // 60 seconds total
+
+        const interval = setInterval(async () => {
+            attempts++;
+            try {
+                const res = await fetch(`${RENDER_BACKEND_URL}/api/get-voucher?ref=${reference}`);
+                const data = await res.json();
+
+                if (data.status === 'success' && data.voucher) {
+                    clearInterval(interval);
+                    document.getElementById('loading-text').innerText = "Enjoy Your Network! Logging you in...";
+                    
+                    setTimeout(() => {
+                        document.getElementById('router-username').value = data.voucher;
+                        document.getElementById('router-password').value = data.voucher;
+                        if (typeof doLogin === 'function') { doLogin(); }
+                        document.login.submit();
+                    }, 1500);
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    document.getElementById('main-view').style.display = 'block';
+                    document.getElementById('loading-view').style.display = 'none';
+                    showAlert("Payment confirmed, but voucher generation timed out. Ref: " + reference, "error");
+                }
+            } catch (e) {}
+        }, 2000);
+    }
+</script>
+
+</body>
+</html>

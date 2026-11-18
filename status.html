@@ -2,28 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Connected - NovaLink</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status - NovaLink Hotspot</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; max-width: 350px; width: 100%; }
-        h2 { color: #28a745; margin-top: 0; }
-        .info { text-align: left; margin: 20px 0; font-size: 14px; color: #555; }
-        .info div { margin-bottom: 8px; }
-        button { background: #dc3545; color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: #1e293b;
+            padding: 32px 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+            border: 1px solid #334155;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #22c55e;
+        }
+        h2 { margin: 0 0 6px; font-size: 24px; color: #f8fafc; }
+        p.subtitle { color: #94a3b8; font-size: 14px; margin: 0 0 24px; }
+        .info-grid {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: left;
+            margin-bottom: 24px;
+            font-size: 13px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #1e293b;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .label { color: #64748b; font-weight: 500; }
+        .value { color: #f1f5f9; font-weight: 600; }
+        .btn-logout {
+            width: 100%;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-logout:hover { background: #dc2626; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>NovaLink <br> Access Active</h2>
-        <p>You are successfully connected to NovaLink Internet.</p>
-        <div class="info">
-            <div><strong>IP Address:</strong> $(ip)</div>
-            <div><strong>Bytes Used:</strong> $(bytes-out-nice)</div>
-            <div><strong>Connected Time:</strong> $(uptime)</div>
-            <div><strong>Time Left:</strong> $(session-time-left)</div>
+    <div class="card">
+        <div class="status-badge">
+            <span class="pulse"></span> Connected & Active
         </div>
-        <form action="$(link-logout)" name="logout" onSubmit="return confirm('Disconnect?');">
-            <button type="submit">Disconnect</button>
+        <h2>NovaLink Internet</h2>
+        <p class="subtitle">High-speed hotspot session active</p>
+
+        <div class="info-grid">
+            <div class="info-row">
+                <span class="label">Voucher / User</span>
+                <span class="value">$(username)</span>
+            </div>
+            <div class="info-row">
+                <span class="label">IP Address</span>
+                <span class="value">$(ip)</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Time Online</span>
+                <span class="value">$(uptime)</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Time Remaining</span>
+                <span class="value">$(session-time-left)</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Downloaded</span>
+                <span class="value">$(bytes-out-nice)</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Uploaded</span>
+                <span class="value">$(bytes-in-nice)</span>
+            </div>
+        </div>
+
+        <form action="$(link-logout)" name="logout" onSubmit="return confirm('Do you want to disconnect from NovaLink?');">
+            <button type="submit" class="btn-logout">Disconnect</button>
         </form>
     </div>
 </body>

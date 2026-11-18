@@ -125,19 +125,19 @@
     <div id="main-view">
         <div class="section-title">Instant Online Access</div>
         <div class="plans-grid">
-            <div class="plan-card" onclick="initPaystack('1-Hour', 100)">
+            <div class="plan-card" onclick="initPaystack('1-Hour-3Mbps', 100)">
                 <div class="plan-name">1 Hour Pass</div>
                 <div class="plan-price">NGN 100</div>
             </div>
-            <div class="plan-card" onclick="initPaystack('24-Hours', 200)">
+            <div class="plan-card" onclick="initPaystack('24-Hours-5Mbps', 200)">
                 <div class="plan-name">24 Hours Pass</div>
                 <div class="plan-price">NGN 200</div>
             </div>
-            <div class="plan-card" onclick="initPaystack('7-Days', 1200)">
+            <div class="plan-card" onclick="initPaystack('7-Days-5Mbps', 1200)">
                 <div class="plan-name">7 Days Pass</div>
                 <div class="plan-price">NGN 1,200</div>
             </div>
-            <div class="plan-card" onclick="initPaystack('1-Month', 3000)">
+            <div class="plan-card" onclick="initPaystack('1-Month-5Mbps', 3000)">
                 <div class="plan-name">1 Month Pass</div>
                 <div class="plan-price">NGN 3,000</div>
             </div>
@@ -246,7 +246,7 @@ $(endif)
 
     async function pollForVoucher(reference) {
         let attempts = 0;
-        const maxAttempts = 15;
+        const maxAttempts = 30; // 60 seconds total
 
         const interval = setInterval(async () => {
             attempts++;

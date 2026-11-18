@@ -458,13 +458,25 @@ $(endif)
             return;
         }
 
-        if (!window.PaystackPop) {
-            showAlert("Connecting to payment server... please tap again in a moment.", "error");
-            loadPaystackScriptAsync();
-            return;
+        if (window.PaystackPop) {
+            initPaystack(pkgKey, amount, phone, pkgName);
+        } else {
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('loading-view').style.display = 'block';
+            document.getElementById('loading-text').innerText = "Connecting to payment gateway...";
+            
+            const script = document.createElement('script');
+            script.src = "https://js.paystack.co/v1/inline.js";
+            script.onload = function() {
+                initPaystack(pkgKey, amount, phone, pkgName);
+            };
+            script.onerror = function() {
+                document.getElementById('main-view').style.display = 'block';
+                document.getElementById('loading-view').style.display = 'none';
+                showAlert("Could not reach payment gateway. Please try tapping again.", "error");
+            };
+            document.body.appendChild(script);
         }
-
-        initPaystack(pkgKey, amount, phone, pkgName);
     }
 
     function initPaystack(pkgKey, amount, phone, pkgName) {

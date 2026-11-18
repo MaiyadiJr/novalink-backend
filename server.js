@@ -17,21 +17,24 @@ app.use(express.json({
 }));
 
 app.use(cors());
+app.use(express.static('public'));
 
 // Configuration Settings from Environment Variables
 const CONFIG = {
     PORT: process.env.PORT || 3000,
-    //PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || // <-- REPLACE or set in Render Env
-    //MIKROTIK_HOST= process.env.MIKROTIK_HOST || 'hmp0bd9vwcq.sn.mynetname.net',                           // <-- REPLACE or set in Render Env
-    //MIKROTIK_PORT= process.env.MIKROTIK_PORT || 443,
-    //MIKROTIK_USER= process.env.MIKROTIK_USER || 'admin',                                             // <-- REPLACE or set in Render Env
-    //MIKROTIK_PASS= process.env.MIKROTIK_PASS || 'Nova@1234',                              // <-- REPLACE or set in Render Env
-    //ADMIN_PIN= process.env.ADMIN_PIN || '5678'                                                       // <-- Set your Admin PIN here
+    PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || '',
+    MIKROTIK_HOST: process.env.MIKROTIK_HOST || 'hmp0bd9vwcq.sn.mynetname.net',
+    MIKROTIK_PORT: process.env.MIKROTIK_PORT || 443,
+    MIKROTIK_USER: process.env.MIKROTIK_USER || 'admin',
+    MIKROTIK_PASS: process.env.MIKROTIK_PASS || 'Nova@1234',
+    ADMIN_PIN: process.env.ADMIN_PIN || '5678'
 };
 
-// HTTPS Agent to communicate with MikroTik REST API (ignoring self-signed SSL certs)
+const mikrotikProtocol = CONFIG.MIKROTIK_PORT == 80 ? 'http' : 'https';
+
+// Axios client to communicate with MikroTik REST API
 const mikrotikClient = axios.create({
-    baseURL: `https://${CONFIG.MIKROTIK_HOST}:${CONFIG.MIKROTIK_PORT}/rest`,
+    baseURL: `${mikrotikProtocol}://${CONFIG.MIKROTIK_HOST}:${CONFIG.MIKROTIK_PORT}/rest`,
     auth: {
         username: CONFIG.MIKROTIK_USER,
         password: CONFIG.MIKROTIK_PASS

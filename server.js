@@ -46,6 +46,19 @@ const mikrotikClient = axios.create({
 // In-Memory store for generated vouchers waiting for frontend polling
 const voucherStore = new Map();
 
+// In-Memory queue for new users waiting to be pulled by MikroTik router
+const pendingRouterUsers = [];
+
+function queueUserForRouter(code, profile, reference) {
+    const targetProfile = PROFILE_MAP[profile] || profile || '1-Hour-3Mbps';
+    pendingRouterUsers.push({
+        code: code,
+        profile: targetProfile,
+        reference: reference || 'MANUAL'
+    });
+    console.log(`[QUEUE] Queued user ${code} (${targetProfile}) for router sync.`);
+}
+
 // Helper Function: Generate Secure Voucher Codes (e.g. NV-8A3F)
 function generateVoucherCode() {
     return 'NV-' + crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -163,23 +176,22 @@ app.post('/webhook/paystack', async (req, res) => {
         if (event.event === 'charge.success') {
             const data = event.data;
             const reference = data.reference;
-            const pkg = data.metadata.package || '1-Hour';
+            const pkg = data.metadata?.package || '1-Hour-3Mbps';
+            const targetProfile = PROFILE_MAP[pkg] || '1-Hour-3Mbps';
 
-            console.log(`Payment confirmed for reference: ${reference}, Package: ${pkg}`);
+            console.log(`Payment confirmed for reference: ${reference}, Package: ${targetProfile}`);
 
             // Generate Voucher Code
             const voucherCode = generateVoucherCode();
 
-            // Push User to MikroTik Router
-            const mikrotikRes = await createMikrotikUser(voucherCode, voucherCode, pkg);
+            // 1. Queue for MikroTik router sync (works seamlessly through CGNAT!)
+            queueUserForRouter(voucherCode, targetProfile, reference);
 
-            if (mikrotikRes.success) {
-                // Save to store so frontend can poll for it
-                voucherStore.set(reference, voucherCode);
-                console.log(`Successfully created voucher ${voucherCode} on MikroTik.`);
-            } else {
-                console.error(`Failed to register voucher ${voucherCode} on router.`);
-            }
+            // 2. Save in memory for frontend polling
+            voucherStore.set(reference, voucherCode);
+
+            // 3. Attempt direct push in background if reachable
+            createMikrotikUser(voucherCode, voucherCode, targetProfile).catch(() => {});
         }
 
         res.sendStatus(200);
@@ -198,7 +210,7 @@ app.get('/api/get-voucher', async (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Missing reference' });
     }
 
-    // 1. Return immediately if webhook already provisioned the voucher
+    // 1. Return immediately if already provisioned or queued
     if (voucherStore.has(reference)) {
         const voucher = voucherStore.get(reference);
         voucherStore.delete(reference); // Clear after retrieval
@@ -219,17 +231,18 @@ app.get('/api/get-voucher', async (req, res) => {
             if (verifyRes.data?.data?.status === 'success') {
                 const data = verifyRes.data.data;
                 const pkg = data.metadata?.package || '1-Hour-3Mbps';
+                const targetProfile = PROFILE_MAP[pkg] || '1-Hour-3Mbps';
                 const voucherCode = generateVoucherCode();
 
-                console.log(`Direct verification verified payment for ${reference}. Creating router user...`);
-                const mikrotikRes = await createMikrotikUser(voucherCode, voucherCode, pkg);
+                console.log(`Direct verification verified payment for ${reference}. Queueing ${voucherCode}...`);
 
-                if (mikrotikRes.success) {
-                    console.log(`Successfully provisioned voucher ${voucherCode} for ${reference}`);
-                    return res.json({ status: 'success', voucher: voucherCode });
-                } else {
-                    console.error(`Failed to register voucher ${voucherCode} on router:`, mikrotikRes.error);
-                }
+                // 1. Queue for MikroTik router sync
+                queueUserForRouter(voucherCode, targetProfile, reference);
+
+                // 2. Also attempt direct push in background
+                createMikrotikUser(voucherCode, voucherCode, targetProfile).catch(() => {});
+
+                return res.json({ status: 'success', voucher: voucherCode });
             }
         }
     } catch (e) {
@@ -262,25 +275,21 @@ app.post('/api/admin/generate-vouchers', async (req, res) => {
 
     const qty = parseInt(quantity) || 1;
     const generatedVouchers = [];
+    const targetProfile = PROFILE_MAP[pkg] || pkg || '1-Hour-3Mbps';
 
     for (let i = 0; i < qty; i++) {
         const code = generateVoucherCode();
-        const response = await createMikrotikUser(code, code, pkg);
-        if (response.success) {
-            generatedVouchers.push({
-                code: code,
-                profile: pkg,
-                price: PACKAGE_PRICES[pkg] || 100
-            });
-        }
-    }
+        // 1. Queue for router pull sync
+        queueUserForRouter(code, targetProfile, 'ADMIN_BATCH');
 
-    if (generatedVouchers.length === 0) {
-        return res.status(502).json({
-            status: false,
-            success: false,
-            error: 'Failed to create user on MikroTik router. Check router firewall and REST API status.'
+        generatedVouchers.push({
+            code: code,
+            profile: targetProfile,
+            price: PACKAGE_PRICES[pkg] || 100
         });
+
+        // 2. Also attempt direct push in background
+        createMikrotikUser(code, code, targetProfile).catch(() => {});
     }
 
     res.json({
@@ -371,6 +380,32 @@ app.post('/api/admin/verify-payment', async (req, res) => {
             error: error.response?.data?.message || 'Failed to verify transaction with Paystack'
         });
     }
+});
+
+// -------------------------------------------------------------------
+// 7. MIKROTIK ROUTER PULL SYNC (.RSC)
+// -------------------------------------------------------------------
+app.get('/api/router-sync.rsc', (req, res) => {
+    const pin = req.query.pin;
+    if (pin !== CONFIG.ADMIN_PIN) {
+        return res.status(401).send('# Unauthorized PIN\r\n');
+    }
+
+    if (pendingRouterUsers.length === 0) {
+        res.setHeader('Content-Type', 'text/plain');
+        return res.send('# NovaLink: No pending users\r\n');
+    }
+
+    let script = '# NovaLink Hotspot Auto-Sync Script\r\n';
+    const count = pendingRouterUsers.length;
+    while (pendingRouterUsers.length > 0) {
+        const u = pendingRouterUsers.shift();
+        script += `/ip hotspot user add name="${u.code}" password="${u.code}" profile="${u.profile}" comment="NovaLink Sync Ref: ${u.reference}"\r\n`;
+    }
+
+    console.log(`[SYNC] Dispatched ${count} user additions to MikroTik router.`);
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(script);
 });
 
 // Health check endpoint

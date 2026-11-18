@@ -385,11 +385,52 @@ $(endif)
     let paystackScriptLoaded = false;
 
     window.onload = function() {
-        // Router error handling
         const urlParams = new URLSearchParams(window.location.search);
+        
+        // Router error handling
         const error = urlParams.get('error');
         if (error) {
             showAlert("Voucher code invalid, expired, or session ended. Please try again.", "error");
+        }
+
+        // Return from hosted Paystack checkout:
+        const refParam = urlParams.get('reference') || urlParams.get('ref');
+        if (refParam) {
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('loading-view').style.display = 'block';
+            document.getElementById('loading-text').innerText = "Verifying payment confirmation...";
+            const stored = sessionStorage.getItem('pending_checkout');
+            let phone = '', pkg = 'Internet Pass', amt = 0;
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    phone = parsed.phone || '';
+                    pkg = parsed.pkgName || parsed.pkgKey || 'Internet Pass';
+                    amt = parsed.amount || 0;
+                } catch(e) {}
+            }
+            pollForVoucher(refParam, pkg, amt, phone);
+            return;
+        }
+
+        // Check if returning from payment-pass activation to launch checkout:
+        if (urlParams.get('checkout') === '1') {
+            const pkgKey = urlParams.get('plan');
+            const amount = Number(urlParams.get('amount'));
+            const phone = urlParams.get('phone') || '';
+            const pkgName = urlParams.get('name') || pkgKey;
+
+            if (phone) {
+                const phoneInput = document.getElementById('customer-phone');
+                if (phoneInput) phoneInput.value = phone;
+            }
+
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('loading-view').style.display = 'block';
+            document.getElementById('loading-text').innerText = "Opening secure payment window...";
+
+            loadPaystackAndInit(pkgKey, amount, phone, pkgName);
+            return;
         }
 
         // Check recent voucher
@@ -451,31 +492,94 @@ $(endif)
     }
 
     function selectPlan(pkgKey, amount, pkgName) {
-        const phone = document.getElementById('customer-phone').value.trim();
+        const phoneInput = document.getElementById('customer-phone');
+        const phone = phoneInput ? phoneInput.value.trim() : '';
         if (!phone) {
             showAlert("Please enter your WhatsApp Phone Number above so we can send your voucher.", "error");
-            document.getElementById('customer-phone').focus();
+            if (phoneInput) phoneInput.focus();
             return;
         }
 
+        try {
+            sessionStorage.setItem('pending_checkout', JSON.stringify({ pkgKey, amount, pkgName, phone }));
+        } catch(e) {}
+
+        // If Paystack is already loaded, open directly!
         if (window.PaystackPop) {
             initPaystack(pkgKey, amount, phone, pkgName);
-        } else {
+            return;
+        }
+
+        // If trial login is available, activate 5-minute Payment Pass so phone has internet for Paystack and banking apps!
+        const trialAvailable = "$(trial)" === "yes";
+        if (trialAvailable) {
             document.getElementById('main-view').style.display = 'none';
             document.getElementById('loading-view').style.display = 'block';
-            document.getElementById('loading-text').innerText = "Connecting to payment gateway...";
-            
-            const script = document.createElement('script');
-            script.src = "https://js.paystack.co/v1/inline.js";
-            script.onload = function() {
-                initPaystack(pkgKey, amount, phone, pkgName);
-            };
-            script.onerror = function() {
-                document.getElementById('main-view').style.display = 'block';
-                document.getElementById('loading-view').style.display = 'none';
-                showAlert("Could not reach payment gateway. Please try tapping again.", "error");
-            };
-            document.body.appendChild(script);
+            document.getElementById('loading-text').innerText = "Activating secure payment pass...";
+
+            const targetUrl = window.location.origin + window.location.pathname + 
+                "?checkout=1&plan=" + encodeURIComponent(pkgKey) + 
+                "&amount=" + encodeURIComponent(amount) + 
+                "&name=" + encodeURIComponent(pkgName) + 
+                "&phone=" + encodeURIComponent(phone);
+
+            window.location.href = "$(link-login-only)?dst=" + encodeURIComponent(targetUrl) + "&username=T-$(mac-esc)";
+            return;
+        }
+
+        // Fallback: Load Paystack script directly or use server-side hosted checkout redirect
+        document.getElementById('main-view').style.display = 'none';
+        document.getElementById('loading-view').style.display = 'block';
+        document.getElementById('loading-text').innerText = "Connecting to payment gateway...";
+
+        loadPaystackAndInit(pkgKey, amount, phone, pkgName);
+    }
+
+    function loadPaystackAndInit(pkgKey, amount, phone, pkgName) {
+        if (window.PaystackPop) {
+            initPaystack(pkgKey, amount, phone, pkgName);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = "https://js.paystack.co/v1/inline.js";
+        script.onload = function() {
+            paystackScriptLoaded = true;
+            initPaystack(pkgKey, amount, phone, pkgName);
+        };
+        script.onerror = function() {
+            // Hosted checkout fallback
+            initHostedCheckout(pkgKey, amount, phone, pkgName);
+        };
+        document.body.appendChild(script);
+    }
+
+    async function initHostedCheckout(pkgKey, amount, phone, pkgName) {
+        document.getElementById('loading-text').innerText = "Redirecting to secure Paystack checkout...";
+        try {
+            const returnUrl = window.location.origin + window.location.pathname;
+            const res = await fetch(`${RENDER_BACKEND_URL}/api/initialize-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    package: pkgKey,
+                    amount: amount,
+                    phone: phone,
+                    mac: "$(mac)",
+                    name: phone,
+                    callback_url: returnUrl
+                })
+            });
+            const data = await res.json();
+            if (data && data.status && data.authorization_url) {
+                window.location.href = data.authorization_url;
+            } else {
+                throw new Error(data.error || 'Initialization failed');
+            }
+        } catch (e) {
+            document.getElementById('main-view').style.display = 'block';
+            document.getElementById('loading-view').style.display = 'none';
+            showAlert("Could not connect to payment gateway: " + e.message + ". Please try again.", "error");
         }
     }
 
@@ -511,9 +615,8 @@ $(endif)
             handler.openIframe();
 
         } catch (err) {
-            document.getElementById('main-view').style.display = 'block';
-            document.getElementById('loading-view').style.display = 'none';
-            showAlert("Payment gateway error: " + err.message, "error");
+            // If iframe opening fails, fallback to hosted checkout
+            initHostedCheckout(pkgKey, amount, phone, pkgName);
         }
     }
 

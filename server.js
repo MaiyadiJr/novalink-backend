@@ -146,7 +146,7 @@ app.get('/api/plans', (req, res) => {
 // -------------------------------------------------------------------
 app.post('/api/initialize-payment', async (req, res) => {
     try {
-        const { package: pkg, amount, mac, phone, name } = req.body;
+        const { package: pkg, amount, mac, phone, name, callback_url } = req.body;
 
         if (!pkg || !amount) {
             return res.status(400).json({ status: false, error: 'Missing package or amount' });
@@ -160,6 +160,7 @@ app.post('/api/initialize-payment', async (req, res) => {
                 amount: Math.round(Number(amount) * 100), // Paystack expects amount in Kobo
                 email: `customer_${Date.now()}@novalink.com`,
                 reference: reference,
+                callback_url: callback_url || `http://192.168.88.1/login?reference=${reference}`,
                 metadata: {
                     package: pkg,
                     mac: mac || 'N/A',

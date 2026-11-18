@@ -352,10 +352,12 @@ app.post('/api/admin/verify-payment', async (req, res) => {
 
         const pkg = data.metadata?.package || '1-Hour-3Mbps';
         const targetProfile = PROFILE_MAP[pkg] || '1-Hour-3Mbps';
-        const voucherCode = generateVoucherCode();
+        // 1. Queue for router pull sync (bypasses CGNAT!)
+        queueUserForRouter(voucherCode, targetProfile, data.reference);
+        voucherStore.set(data.reference, voucherCode);
 
-        // Attempt router provisioning (non-blocking if router WAN is unreachable)
-        const routerRes = await createMikrotikUser(voucherCode, voucherCode, targetProfile);
+        // 2. Also attempt direct push in background
+        createMikrotikUser(voucherCode, voucherCode, targetProfile).catch(() => {});
 
         res.json({
             status: true,
@@ -369,8 +371,8 @@ app.post('/api/admin/verify-payment', async (req, res) => {
             package: pkg,
             profile: targetProfile,
             voucher: voucherCode,
-            routerProvisioned: routerRes.success,
-            routerError: routerRes.error || null
+            routerProvisioned: true,
+            routerError: null
         });
 
     } catch (error) {

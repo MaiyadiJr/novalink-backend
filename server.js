@@ -176,6 +176,17 @@ app.get('/api/get-voucher', (req, res) => {
     res.json({ status: 'pending', message: 'Voucher not ready yet.' });
 });
 
+// Package price map
+const PACKAGE_PRICES = {
+    '1-Hour-2Mbps': 100,
+    '1-Hour': 100,
+    '24-Hours-5Mbps': 500,
+    '24-Hours': 500,
+    '7-Days-5Mbps': 2500,
+    '7-Days': 2500,
+    '1-Month': 3000
+};
+
 // -------------------------------------------------------------------
 // 4. ADMIN: BATCH VOUCHER GENERATION
 // -------------------------------------------------------------------
@@ -183,7 +194,7 @@ app.post('/api/admin/generate-vouchers', async (req, res) => {
     const { pin, package: pkg, quantity } = req.body;
 
     if (pin !== CONFIG.ADMIN_PIN) {
-        return res.status(401).json({ status: false, error: 'Unauthorized PIN' });
+        return res.status(401).json({ status: false, success: false, error: 'Unauthorized PIN' });
     }
 
     const qty = parseInt(quantity) || 1;
@@ -193,12 +204,25 @@ app.post('/api/admin/generate-vouchers', async (req, res) => {
         const code = generateVoucherCode();
         const response = await createMikrotikUser(code, code, pkg);
         if (response.success) {
-            generatedVouchers.push(code);
+            generatedVouchers.push({
+                code: code,
+                profile: pkg,
+                price: PACKAGE_PRICES[pkg] || 100
+            });
         }
+    }
+
+    if (generatedVouchers.length === 0) {
+        return res.status(502).json({
+            status: false,
+            success: false,
+            error: 'Failed to create user on MikroTik router. Check router firewall and REST API status.'
+        });
     }
 
     res.json({
         status: true,
+        success: true,
         count: generatedVouchers.length,
         vouchers: generatedVouchers
     });

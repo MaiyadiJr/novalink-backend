@@ -90,13 +90,17 @@
                 });
 
                 const data = await res.json();
-                if(data.success) {
-                    renderVouchers(data.vouchers);
+                if (data.success || data.status) {
+                    if (data.vouchers && data.vouchers.length > 0) {
+                        renderVouchers(data.vouchers);
+                    } else {
+                        alert("Router connection failed: 0 vouchers could be generated. Please verify router REST API and firewall.");
+                    }
                 } else {
-                    alert("Error: " + data.error);
+                    alert("Error: " + (data.error || "Failed to generate vouchers"));
                 }
             } catch (err) {
-                alert("Failed to connect to payment bridge.");
+                alert("Failed to connect to payment bridge: " + err.message);
             }
         }
 
@@ -105,14 +109,17 @@
             container.innerHTML = '';
 
             vouchers.forEach(v => {
+                const code = v.code || v;
+                const price = v.price || '100';
+                const profile = v.profile || 'Pass';
                 const col = document.createElement('div');
                 col.className = 'col-6 col-md-4';
                 col.innerHTML = `
                     <div class="voucher-ticket">
                         <small class="text-muted d-block">NOVALINK WI-FI</small>
-                        <div class="voucher-code">${v.code}</div>
-                        <div class="fw-bold text-dark">₦${v.price}</div>
-                        <small class="text-secondary">${v.profile}</small>
+                        <div class="voucher-code">${code}</div>
+                        <div class="fw-bold text-dark">₦${price}</div>
+                        <small class="text-secondary">${profile}</small>
                     </div>
                 `;
                 container.appendChild(col);

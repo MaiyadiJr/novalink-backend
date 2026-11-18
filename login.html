@@ -207,27 +207,24 @@ $(endif)
         document.login.submit();
     }
 
-    async function initPaystack(pkgKey, amount) {
+    function initPaystack(pkgKey, amount) {
         showAlert("", "clear");
         document.getElementById('main-view').style.display = 'none';
         document.getElementById('loading-view').style.display = 'block';
-        document.getElementById('loading-text').innerText = "Initializing secure payment...";
+        document.getElementById('loading-text').innerText = "Opening payment window...";
+
+        const reference = `NV_REF_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
         try {
-            const response = await fetch(`${RENDER_BACKEND_URL}/api/initialize-payment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ package: pkgKey, amount: amount, mac: "$(mac)" })
-            });
-
-            const data = await response.json();
-            if (!data.status) throw new Error(data.error || 'Failed to initialize payment');
-
             let handler = PaystackPop.setup({
                 key: LIVE_PAYSTACK_KEY,
                 email: `customer_${Date.now()}@novalink.com`,
                 amount: amount * 100,
-                ref: data.reference,
+                ref: reference,
+                metadata: {
+                    package: pkgKey,
+                    mac: "$(mac)"
+                },
                 callback: function(response) {
                     document.getElementById('loading-text').innerText = "Payment complete! Generating your voucher...";
                     pollForVoucher(response.reference);

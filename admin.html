@@ -939,26 +939,37 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/active-users?pin=${adminPin}`);
                 const data = await res.json();
-                if (data.status && data.users) {
+                if (data.status && Array.isArray(data.users)) {
                     if (data.users.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No active devices currently online.</td></tr>';
+                        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-circle-check text-success me-1"></i> Router is online & connected. No active client devices connected right now.
+                        </td></tr>`;
                         return;
                     }
-                    tbody.innerHTML = data.users.map(u => `
-                        <tr>
-                            <td><span class="voucher-badge">${escapeHtml(u.user || 'Unknown')}</span></td>
-                            <td><code>${escapeHtml(u.address || 'N/A')}</code></td>
-                            <td><small class="text-secondary">${escapeHtml(u['mac-address'] || 'N/A')}</small></td>
-                            <td><span class="badge bg-light text-dark border">${escapeHtml(u.uptime || 'N/A')}</span></td>
-                            <td class="text-primary">${escapeHtml(u['bytes-out'] ? formatBytes(u['bytes-out']) : '0 B')}</td>
-                            <td class="text-success">${escapeHtml(u['bytes-in'] ? formatBytes(u['bytes-in']) : '0 B')}</td>
-                            <td>
-                                <button class="btn btn-outline-danger btn-sm" onclick="disconnectUser('${u['.id']}', '${u.user}')">
-                                    <i class="fa-solid fa-user-xmark me-1"></i> Disconnect
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('');
+                    tbody.innerHTML = data.users.map(u => {
+                        const userVal = u.user || u.name || 'Unknown';
+                        const addrVal = u.address || u.ip || 'N/A';
+                        const macVal = u['mac-address'] || u.mac || 'N/A';
+                        const uptimeVal = u.uptime || 'N/A';
+                        const outVal = u['bytes-out'] || u.bytesOut || 0;
+                        const inVal = u['bytes-in'] || u.bytesIn || 0;
+
+                        return `
+                            <tr>
+                                <td><span class="voucher-badge">${escapeHtml(userVal)}</span></td>
+                                <td><code>${escapeHtml(addrVal)}</code></td>
+                                <td><small class="text-secondary">${escapeHtml(macVal)}</small></td>
+                                <td><span class="badge bg-light text-dark border">${escapeHtml(uptimeVal)}</span></td>
+                                <td class="text-primary">${formatBytes(outVal)}</td>
+                                <td class="text-success">${formatBytes(inVal)}</td>
+                                <td>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="disconnectUser('${userVal}')">
+                                        <i class="fa-solid fa-user-xmark me-1"></i> Disconnect
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
                 } else {
                     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Failed to fetch router sessions. Check router connection.</td></tr>';
                 }
@@ -967,16 +978,17 @@
             }
         }
 
-        async function disconnectUser(id, username) {
+        async function disconnectUser(username) {
             if (!confirm(`Disconnect user "${username}" from the hotspot?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/disconnect-user`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: adminPin, id: id, user: username })
+                    body: JSON.stringify({ pin: adminPin, user: username })
                 });
                 const data = await res.json();
                 if (data.status) {
+                    alert(`User "${username}" disconnect command dispatched to router.`);
                     loadActiveUsers();
                 } else {
                     alert('Error disconnecting user: ' + (data.error || 'Failed'));

@@ -310,6 +310,69 @@ app.get('/api/admin/active-users', async (req, res) => {
     }
 });
 
+// -------------------------------------------------------------------
+// 6. ADMIN: VERIFY CUSTOMER PAYMENT BY REFERENCE
+// -------------------------------------------------------------------
+app.post('/api/admin/verify-payment', async (req, res) => {
+    const { pin, reference } = req.body;
+
+    if (pin !== CONFIG.ADMIN_PIN) {
+        return res.status(401).json({ status: false, error: 'Unauthorized PIN' });
+    }
+
+    if (!reference) {
+        return res.status(400).json({ status: false, error: 'Missing reference' });
+    }
+
+    try {
+        const verifyRes = await axios.get(
+            `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference.trim())}`,
+            {
+                headers: { Authorization: `Bearer ${CONFIG.PAYSTACK_SECRET_KEY}` },
+                timeout: 8000
+            }
+        );
+
+        const data = verifyRes.data?.data;
+        if (!data || data.status !== 'success') {
+            return res.status(400).json({
+                status: false,
+                error: `Payment is not confirmed. Status: ${data?.status || 'Not found'}`
+            });
+        }
+
+        const pkg = data.metadata?.package || '1-Hour-3Mbps';
+        const targetProfile = PROFILE_MAP[pkg] || '1-Hour-3Mbps';
+        const voucherCode = generateVoucherCode();
+
+        // Attempt router provisioning (non-blocking if router WAN is unreachable)
+        const routerRes = await createMikrotikUser(voucherCode, voucherCode, targetProfile);
+
+        res.json({
+            status: true,
+            success: true,
+            reference: data.reference,
+            amount: data.amount / 100,
+            channel: data.channel,
+            paid_at: data.paid_at,
+            customer_name: data.authorization?.sender_name || data.customer?.first_name || 'Customer',
+            customer_email: data.customer?.email,
+            package: pkg,
+            profile: targetProfile,
+            voucher: voucherCode,
+            routerProvisioned: routerRes.success,
+            routerError: routerRes.error || null
+        });
+
+    } catch (error) {
+        console.error('Admin Verify Error:', error.response?.data || error.message);
+        res.status(500).json({
+            status: false,
+            error: error.response?.data?.message || 'Failed to verify transaction with Paystack'
+        });
+    }
+});
+
 // Health check endpoint
 app.get('/', (req, res) => {
     res.send('NovaLink Payment Bridge is online.');

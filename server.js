@@ -542,6 +542,14 @@ app.post('/api/admin/disconnect-user', requireAdmin, (req, res) => {
     res.json({ status: true, success: true, queued: true });
 });
 
+// Admin: Execute Router Command via Sync Queue
+app.post('/api/admin/exec-router-cmd', requireAdmin, (req, res) => {
+    const { cmd } = req.body;
+    if (!cmd) return res.status(400).json({ status: false, error: 'Missing cmd' });
+    pendingRouterCommands.push(cmd);
+    res.json({ status: true, queued: cmd });
+});
+
 // Admin: Verify Customer Payment by Reference
 app.post('/api/admin/verify-payment', requireAdmin, async (req, res) => {
     const { reference } = req.body;

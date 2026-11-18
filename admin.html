@@ -3,196 +3,1166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NovaLink Admin - Cash Vouchers</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>NovaLink Hotspot Admin Console</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 Free Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        body { background: #f8f9fa; font-family: -apple-system, sans-serif; }
-        .card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .voucher-ticket { border: 2px dashed #0d6efd; background: #f0f7ff; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 12px; }
-        .voucher-code { font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #0d6efd; margin: 8px 0; }
+        :root {
+            --sidebar-width: 260px;
+            --primary-color: #2563eb;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --body-bg: #f8fafc;
+            --card-border: #e2e8f0;
+        }
+        body {
+            background-color: var(--body-bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #334155;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        /* Sidebar Styling */
+        #sidebar {
+            width: var(--sidebar-width);
+            min-height: 100vh;
+            background: var(--sidebar-bg);
+            color: #94a3b8;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-brand {
+            padding: 24px 20px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sidebar-brand span { color: #38bdf8; }
+        .sidebar-nav {
+            list-style: none;
+            padding: 16px 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+        .sidebar-nav li a {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 24px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-nav li a:hover {
+            color: #fff;
+            background: var(--sidebar-hover);
+        }
+        .sidebar-nav li a.active {
+            color: #fff;
+            background: #1e293b;
+            border-left-color: #38bdf8;
+            font-weight: 600;
+        }
+        .sidebar-nav li a i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 12px;
+        }
+        /* Main Layout */
+        #content {
+            margin-left: var(--sidebar-width);
+            padding: 28px 36px;
+            min-height: 100vh;
+            transition: all 0.3s;
+        }
+        @media (max-width: 992px) {
+            #sidebar { margin-left: calc(-1 * var(--sidebar-width)); }
+            #sidebar.open { margin-left: 0; }
+            #content { margin-left: 0; padding: 20px; }
+        }
+        /* Cards & Components */
+        .card-custom {
+            background: #fff;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            margin-bottom: 24px;
+        }
+        .kpi-card {
+            padding: 22px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .kpi-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+        .kpi-val { font-size: 28px; font-weight: 700; color: #0f172a; margin-top: 4px; }
+        .kpi-lbl { font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .table th {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            background: #f8fafc;
+            font-weight: 600;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .table td {
+            font-size: 13px;
+            padding: 14px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .voucher-badge {
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: 700;
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+            display: inline-block;
+        }
+        .btn-whatsapp {
+            background-color: #25d366;
+            color: #fff;
+            font-weight: 600;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .btn-whatsapp:hover {
+            background-color: #128c7e;
+            color: #fff;
+        }
+        /* Printable Slips */
+        .voucher-ticket {
+            border: 2px dashed #3b82f6;
+            background: #f0f7ff;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .ticket-code {
+            font-family: monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: #1d4ed8;
+            letter-spacing: 2px;
+            margin: 6px 0;
+        }
         @media print {
-            body * { visibility: hidden; }
+            #sidebar, .no-print, header, .card-custom { display: none !important; }
             #printableArea, #printableArea * { visibility: visible; }
-            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+            #printableArea { display: flex !important; flex-wrap: wrap; position: absolute; left: 0; top: 0; width: 100%; }
+            .col-print { width: 33.333% !important; page-break-inside: avoid; }
         }
     </style>
 </head>
-<body class="p-3 p-md-5">
-    <div class="container" style="max-width: 800px;">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>⚡ NovaLink Admin Panel</h2>
-            <span class="badge bg-success">Connected</span>
+<body>
+
+    <!-- AUTHENTICATION MODAL -->
+    <div id="authOverlay" style="position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div class="card p-4 text-center" style="max-width: 400px; width: 100%; border-radius: 16px; border: 1px solid #334155; background: #1e293b; color: #fff;">
+            <div style="width: 56px; height: 56px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px;">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h4 class="fw-bold mb-1">NovaLink Admin</h4>
+            <p class="text-secondary small mb-4">Enter security PIN to access the management portal</p>
+            <form onsubmit="handleAuth(event)">
+                <div class="mb-3">
+                    <input type="password" id="authPinInput" class="form-control form-control-lg text-center" placeholder="••••" style="letter-spacing: 8px; font-size: 24px;" autofocus required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold" id="authBtn">
+                    <i class="fa-solid fa-lock-open me-2"></i> Unlock Portal
+                </button>
+            </form>
+            <div id="authError" class="alert alert-danger mt-3 d-none small"></div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-bolt text-info"></i>
+            <div>NOVA<span>LINK</span></div>
+        </div>
+        <ul class="sidebar-nav">
+            <li>
+                <a href="#overview" class="active" onclick="switchTab('overview')">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="#transactions" onclick="switchTab('transactions')">
+                    <i class="fa-solid fa-receipt"></i> Transactions & Sales
+                </a>
+            </li>
+            <li>
+                <a href="#vouchers" onclick="switchTab('vouchers')">
+                    <i class="fa-solid fa-ticket"></i> Voucher Manager
+                </a>
+            </li>
+            <li>
+                <a href="#active-users" onclick="switchTab('active-users')">
+                    <i class="fa-solid fa-users"></i> Live Hotspot Users
+                </a>
+            </li>
+            <li>
+                <a href="#plans" onclick="switchTab('plans')">
+                    <i class="fa-solid fa-layer-group"></i> Packages & Pricing
+                </a>
+            </li>
+            <li>
+                <a href="#verifier" onclick="switchTab('verifier')">
+                    <i class="fa-solid fa-magnifying-glass"></i> Payment Verifier
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle mb-1">
+                        <i class="fa-solid fa-circle-check me-1"></i> RB5009 Sync
+                    </span>
+                    <div class="text-secondary small">Router: 192.168.88.1</div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="logout()" title="Lock Console">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main id="content">
+        <!-- TOP HEADER -->
+        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-outline-secondary d-lg-none" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <h3 class="fw-bold mb-0" id="sectionTitle">Dashboard Overview</h3>
+                    <small class="text-secondary" id="lastUpdatedText">Live connection active</small>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="refreshCurrentTab()">
+                    <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+                </button>
+            </div>
         </div>
 
-        <div class="card p-4 mb-4" id="authCard">
-            <h5>Admin Authentication</h5>
-            <div class="input-group mt-2">
-                <input type="password" id="adminPin" class="form-control" placeholder="Enter Admin PIN">
-                <button class="btn btn-primary" onclick="login()">Unlock Panel</button>
-            </div>
-        </div>
-
-        <div id="mainDashboard" class="d-none">
-            <div class="card p-4 mb-4">
-                <h5>Generate Cash Vouchers</h5>
-                <form onsubmit="generateVouchers(event)">
-                    <div class="row g-3 mt-1">
-                        <div class="col-md-6">
-                            <label class="form-label">Package Profile</label>
-                                <option value="1-Hour-3Mbps">1 Hour Pass (₦100)</option>
-                                <option value="24-Hours-5Mbps" selected>24 Hours Pass (₦500)</option>
-                                <option value="7-Days-5Mbps">7 Days Pass (₦2,500)</option>
-                                <option value="1-Month-5Mbps">1 Month Pass (₦3,000)</option>
-                            </select>
+        <!-- 1. DASHBOARD OVERVIEW TAB -->
+        <section id="tab-overview" class="tab-content">
+            <!-- KPI CARDS -->
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card-custom kpi-card">
+                        <div>
+                            <div class="kpi-lbl">Total Revenue</div>
+                            <div class="kpi-val text-primary" id="kpiTotalRevenue">₦0</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" id="qtyInput" class="form-control" value="1" min="1" max="50" required>
-                        </div>
-                        <div class="col-12 mt-3">
-                            <button type="submit" class="btn btn-success w-100 fw-bold py-2">⚡ Generate Vouchers</button>
+                        <div class="kpi-icon bg-primary-subtle text-primary">
+                            <i class="fa-solid fa-wallet"></i>
                         </div>
                     </div>
-                </form>
-            </div>
-
-            <!-- Verify Customer Payment Card -->
-            <div class="card p-4 mb-4">
-                <h5>🔍 Verify Customer Payment & Retrieve Voucher</h5>
-                <p class="text-muted small">Enter Paystack transaction reference to confirm payment and issue/display the customer's voucher code.</p>
-                <form onsubmit="verifyPayment(event)">
-                    <div class="input-group">
-                        <input type="text" id="verifyRefInput" class="form-control" placeholder="e.g. NV_REF_1795017272532_931" required>
-                        <button type="submit" class="btn btn-primary fw-bold" id="verifyBtn">Verify Transaction</button>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card-custom kpi-card">
+                        <div>
+                            <div class="kpi-lbl">Today's Sales</div>
+                            <div class="kpi-val text-success" id="kpiTodayRevenue">₦0</div>
+                        </div>
+                        <div class="kpi-icon bg-success-subtle text-success">
+                            <i class="fa-solid fa-calendar-day"></i>
+                        </div>
                     </div>
-                </form>
-
-                <div id="verifyResult" class="mt-3 d-none"></div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card-custom kpi-card">
+                        <div>
+                            <div class="kpi-lbl">Vouchers Issued</div>
+                            <div class="kpi-val text-info" id="kpiTotalSold">0</div>
+                        </div>
+                        <div class="kpi-icon bg-info-subtle text-info">
+                            <i class="fa-solid fa-ticket"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card-custom kpi-card">
+                        <div>
+                            <div class="kpi-lbl">Live Hotspot Users</div>
+                            <div class="kpi-val text-warning" id="kpiActiveUsers">0</div>
+                        </div>
+                        <div class="kpi-icon bg-warning-subtle text-warning">
+                            <i class="fa-solid fa-wifi"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="card p-4 d-none" id="vouchersOutputCard">
+            <!-- RECENT TRANSACTIONS PREVIEW -->
+            <div class="card-custom p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="m-0">Generated Slips</h5>
-                    <button class="btn btn-outline-dark btn-sm" onclick="window.print()">🖨️ Print</button>
+                    <h5 class="fw-bold mb-0">Recent Sales & WhatsApp Dispatch</h5>
+                    <button class="btn btn-sm btn-link text-decoration-none" onclick="switchTab('transactions')">View All &rarr;</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Customer</th>
+                                <th>Phone / WhatsApp</th>
+                                <th>Package</th>
+                                <th>Amount</th>
+                                <th>Voucher</th>
+                                <th>Expires At</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overviewRecentTxBody">
+                            <tr><td colspan="8" class="text-center py-4 text-muted">Loading live transactions...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. TRANSACTIONS & SALES TAB -->
+        <section id="tab-transactions" class="tab-content d-none">
+            <div class="card-custom p-4">
+                <div class="row g-3 mb-3 align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                            <input type="text" id="txSearchInput" class="form-control border-start-0" placeholder="Search phone, voucher, customer name, reference..." oninput="filterTransactions()">
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <button class="btn btn-outline-success btn-sm" onclick="exportTransactionsCSV()">
+                            <i class="fa-solid fa-file-csv me-1"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Date/Time</th>
+                                <th>Customer Name</th>
+                                <th>Phone Number</th>
+                                <th>Plan</th>
+                                <th>Amount</th>
+                                <th>Voucher</th>
+                                <th>Valid Until</th>
+                                <th>WhatsApp Delivery</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fullTransactionsBody">
+                            <tr><td colspan="9" class="text-center py-4 text-muted">Loading transactions...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. VOUCHER MANAGER TAB -->
+        <section id="tab-vouchers" class="tab-content d-none">
+            <!-- GENERATE CARD -->
+            <div class="card-custom p-4 mb-4">
+                <h5 class="fw-bold mb-3"><i class="fa-solid fa-plus-circle text-primary me-2"></i> Generate Cash Vouchers</h5>
+                <form onsubmit="handleGenerateBatch(event)">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">Package Profile</label>
+                            <select id="batchPkgSelect" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Quantity</label>
+                            <input type="number" id="batchQtyInput" class="form-control" value="5" min="1" max="100" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100 fw-bold" id="batchGenBtn">
+                                <i class="fa-solid fa-bolt me-1"></i> Generate & Sync to Router
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- PRINTABLE CARDS SLIP (IF GENERATED) -->
+            <div class="card-custom p-4 d-none" id="vouchersSlipCard">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Newly Generated Slips</h5>
+                    <button class="btn btn-dark btn-sm" onclick="window.print()">
+                        <i class="fa-solid fa-print me-1"></i> Print Voucher Slips
+                    </button>
                 </div>
                 <div id="printableArea" class="row"></div>
+            </div>
+
+            <!-- VOUCHERS INVENTORY TABLE -->
+            <div class="card-custom p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Vouchers Inventory</h5>
+                    <input type="text" id="voucherSearchInput" class="form-control form-control-sm" style="max-width: 280px;" placeholder="Search voucher code..." oninput="filterVouchers()">
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Voucher Code</th>
+                                <th>Profile</th>
+                                <th>Price</th>
+                                <th>Created</th>
+                                <th>Expires</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vouchersInventoryBody">
+                            <tr><td colspan="8" class="text-center py-4 text-muted">Loading vouchers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. ACTIVE HOTSPOT USERS TAB -->
+        <section id="tab-active-users" class="tab-content d-none">
+            <div class="card-custom p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">Active Hotspot Sessions (Live from RB5009)</h5>
+                        <small class="text-secondary">Connected users currently consuming bandwidth</small>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadActiveUsers()">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Reload Sessions
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Voucher / User</th>
+                                <th>IP Address</th>
+                                <th>MAC Address</th>
+                                <th>Session Uptime</th>
+                                <th>Bytes Downloaded</th>
+                                <th>Bytes Uploaded</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeUsersBody">
+                            <tr><td colspan="7" class="text-center py-4 text-muted">Checking router sessions...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. PACKAGES & PRICING TAB -->
+        <section id="tab-plans" class="tab-content d-none">
+            <div class="card-custom p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Captive Portal Pricing Packages</h5>
+                    <button class="btn btn-success btn-sm fw-bold" onclick="showAddPlanModal()">
+                        <i class="fa-solid fa-plus me-1"></i> Add New Package
+                    </button>
+                </div>
+                <p class="text-secondary small">These packages are dynamically displayed on your customer login portal for online Paystack purchases.</p>
+                <div class="row g-3" id="plansContainer"></div>
+            </div>
+        </section>
+
+        <!-- 6. PAYMENT VERIFIER TAB -->
+        <section id="tab-verifier" class="tab-content d-none">
+            <div class="card-custom p-4">
+                <h5 class="fw-bold mb-1">Instant Paystack Transaction Verification</h5>
+                <p class="text-secondary small mb-4">Enter a customer's Paystack reference to verify payment directly against Paystack live servers and immediately issue or retrieve their access voucher.</p>
+                
+                <form onsubmit="handleManualVerify(event)" style="max-width: 600px;">
+                    <div class="input-group mb-3">
+                        <input type="text" id="verifyRefInput" class="form-control" placeholder="e.g. NV_REF_1795017272532_931" required>
+                        <button type="submit" class="btn btn-primary fw-bold" id="verifyBtn">
+                            <i class="fa-solid fa-magnifying-glass me-1"></i> Query Paystack
+                        </button>
+                    </div>
+                </form>
+
+                <div id="verifyResultBox" class="mt-4 d-none" style="max-width: 600px;"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ADD PLAN MODAL -->
+    <div class="modal fade" id="planModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="planModalTitle">Add New Package</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="planForm" onsubmit="handleSavePlan(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Package Name</label>
+                            <input type="text" id="planNameInput" class="form-control" placeholder="e.g. 3 Hours Pass" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">RouterOS Profile</label>
+                            <input type="text" id="planProfileInput" class="form-control" placeholder="e.g. 1-Hour-3Mbps or default" required>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Price (₦)</label>
+                                <input type="number" id="planPriceInput" class="form-control" placeholder="250" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Duration (Hours)</label>
+                                <input type="number" id="planDurationInput" class="form-control" placeholder="3" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Speed Limit Text</label>
+                            <input type="text" id="planSpeedInput" class="form-control" placeholder="e.g. 5 Mbps">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">Save Package</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let currentPin = '';
-        const bridgeUrl = "https://novalink-backend-uyja.onrender.com";
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-        function login() {
-            currentPin = document.getElementById('adminPin').value;
-            if(!currentPin) return alert("Please enter PIN");
-            document.getElementById('authCard').classList.add('d-none');
-            document.getElementById('mainDashboard').classList.remove('d-none');
+    <script>
+        const API_BASE = "https://novalink-backend-uyja.onrender.com";
+        let adminPin = localStorage.getItem('novalink_admin_pin') || '';
+        let currentTab = 'overview';
+        let allTransactions = [];
+        let allVouchers = [];
+        let allPlans = [];
+
+        // Check stored PIN on load
+        window.onload = function() {
+            if (adminPin) {
+                document.getElementById('authOverlay').style.display = 'none';
+                loadAllData();
+            }
+        };
+
+        function handleAuth(e) {
+            e.preventDefault();
+            const pin = document.getElementById('authPinInput').value.trim();
+            if (!pin) return;
+            
+            document.getElementById('authBtn').disabled = true;
+            document.getElementById('authBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Verifying...';
+
+            fetch(`${API_BASE}/api/admin/stats?pin=${encodeURIComponent(pin)}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('authBtn').disabled = false;
+                    document.getElementById('authBtn').innerHTML = '<i class="fa-solid fa-lock-open me-2"></i> Unlock Portal';
+                    if (data.status) {
+                        adminPin = pin;
+                        localStorage.setItem('novalink_admin_pin', pin);
+                        document.getElementById('authOverlay').style.display = 'none';
+                        loadAllData();
+                    } else {
+                        showAuthError('Invalid Admin PIN. Please try again.');
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('authBtn').disabled = false;
+                    document.getElementById('authBtn').innerHTML = '<i class="fa-solid fa-lock-open me-2"></i> Unlock Portal';
+                    showAuthError('Connection error: ' + err.message);
+                });
         }
 
-        async function generateVouchers(e) {
-            e.preventDefault();
-            const pkg = document.getElementById('pkgSelect').value;
-            const qty = document.getElementById('qtyInput').value;
+        function showAuthError(msg) {
+            const errBox = document.getElementById('authError');
+            errBox.innerText = msg;
+            errBox.classList.remove('d-none');
+        }
 
+        function logout() {
+            localStorage.removeItem('novalink_admin_pin');
+            adminPin = '';
+            document.getElementById('authOverlay').style.display = 'flex';
+            document.getElementById('authPinInput').value = '';
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.sidebar-nav li a').forEach(a => a.classList.remove('active'));
+            const activeLink = document.querySelector(`.sidebar-nav li a[href="#${tabId}"]`);
+            if (activeLink) activeLink.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('d-none'));
+            const target = document.getElementById(`tab-${tabId}`);
+            if (target) target.classList.remove('d-none');
+
+            const titles = {
+                'overview': 'Dashboard Overview',
+                'transactions': 'Sales & Customer Transactions',
+                'vouchers': 'Voucher Generator & Inventory',
+                'active-users': 'Live Hotspot Sessions',
+                'plans': 'Packages & Pricing Management',
+                'verifier': 'Paystack Payment Verifier'
+            };
+            document.getElementById('sectionTitle').innerText = titles[tabId] || 'Console';
+            refreshCurrentTab();
+            if (window.innerWidth < 992) document.getElementById('sidebar').classList.remove('open');
+        }
+
+        function refreshCurrentTab() {
+            if (currentTab === 'overview') loadOverview();
+            else if (currentTab === 'transactions') loadTransactions();
+            else if (currentTab === 'vouchers') loadVouchers();
+            else if (currentTab === 'active-users') loadActiveUsers();
+            else if (currentTab === 'plans') loadPlans();
+        }
+
+        function loadAllData() {
+            loadOverview();
+            loadPlans();
+        }
+
+        // 1. OVERVIEW
+        async function loadOverview() {
             try {
-                const res = await fetch(`${bridgeUrl}/api/admin/generate-vouchers`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: currentPin, package: pkg, quantity: qty })
-                });
-
-                const data = await res.json();
-                if (data.success || data.status) {
-                    if (data.vouchers && data.vouchers.length > 0) {
-                        renderVouchers(data.vouchers);
-                    } else {
-                        alert("Router connection failed: 0 vouchers could be generated. Please verify router REST API and firewall.");
-                    }
-                } else {
-                    alert("Error: " + (data.error || "Failed to generate vouchers"));
+                const statsRes = await fetch(`${API_BASE}/api/admin/stats?pin=${adminPin}`);
+                const statsData = await statsRes.json();
+                if (statsData.status && statsData.stats) {
+                    const s = statsData.stats;
+                    document.getElementById('kpiTotalRevenue').innerText = `₦${(s.totalRevenue || 0).toLocaleString()}`;
+                    document.getElementById('kpiTodayRevenue').innerText = `₦${(s.todayRevenue || 0).toLocaleString()}`;
+                    document.getElementById('kpiTotalSold').innerText = s.totalSold || 0;
+                    document.getElementById('kpiActiveUsers').innerText = s.activeHotspotUsers || 0;
                 }
-            } catch (err) {
-                alert("Failed to connect to payment bridge: " + err.message);
+
+                // Recent Transactions
+                const txRes = await fetch(`${API_BASE}/api/admin/transactions?pin=${adminPin}`);
+                const txData = await txRes.json();
+                if (txData.status && txData.transactions) {
+                    allTransactions = txData.transactions;
+                    renderOverviewRecentTx(allTransactions.slice(0, 5));
+                }
+            } catch (e) {
+                console.error(e);
             }
         }
 
-        function renderVouchers(vouchers) {
-            const container = document.getElementById('printableArea');
-            container.innerHTML = '';
-
-            vouchers.forEach(v => {
-                const code = v.code || v;
-                const price = v.price || '100';
-                const profile = v.profile || 'Pass';
-                const col = document.createElement('div');
-                col.className = 'col-6 col-md-4';
-                col.innerHTML = `
-                    <div class="voucher-ticket">
-                        <small class="text-muted d-block">NOVALINK WI-FI</small>
-                        <div class="voucher-code">${code}</div>
-                        <div class="fw-bold text-dark">₦${price}</div>
-                        <small class="text-secondary">${profile}</small>
-                    </div>
+        function renderOverviewRecentTx(list) {
+            const tbody = document.getElementById('overviewRecentTxBody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No sales recorded yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(tx => {
+                const phone = tx.customer_phone || '';
+                const waLink = buildWhatsAppLink(phone, tx.customer_name, tx.voucher, tx.profile, tx.expires_at);
+                const expiryText = tx.expires_at ? new Date(tx.expires_at).toLocaleString() : 'N/A';
+                return `
+                    <tr>
+                        <td>${new Date(tx.paid_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</td>
+                        <td class="fw-semibold">${escapeHtml(tx.customer_name || 'Customer')}</td>
+                        <td>${phone ? `<code>${escapeHtml(phone)}</code>` : '<span class="text-muted small">None</span>'}</td>
+                        <td><span class="badge bg-light text-dark border">${escapeHtml(tx.profile || 'Pass')}</span></td>
+                        <td class="fw-bold text-success">₦${Number(tx.amount || 0).toLocaleString()}</td>
+                        <td><span class="voucher-badge">${escapeHtml(tx.voucher || 'N/A')}</span></td>
+                        <td class="small text-secondary">${expiryText}</td>
+                        <td>
+                            ${phone ? `<a href="${waLink}" target="_blank" class="btn-whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : '<span class="text-muted small">No Phone</span>'}
+                        </td>
+                    </tr>
                 `;
-                container.appendChild(col);
-            });
-
-            document.getElementById('vouchersOutputCard').classList.remove('d-none');
+            }).join('');
         }
 
-        async function verifyPayment(e) {
-            e.preventDefault();
-            const ref = document.getElementById('verifyRefInput').value.trim();
-            const resultBox = document.getElementById('verifyResult');
-            const btn = document.getElementById('verifyBtn');
+        // 2. TRANSACTIONS
+        async function loadTransactions() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/transactions?pin=${adminPin}`);
+                const data = await res.json();
+                if (data.status && data.transactions) {
+                    allTransactions = data.transactions;
+                    renderTransactionsTable(allTransactions);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
 
-            if (!ref) return alert("Please enter reference");
+        function renderTransactionsTable(list) {
+            const tbody = document.getElementById('fullTransactionsBody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No transactions found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(tx => {
+                const phone = tx.customer_phone || '';
+                const waLink = buildWhatsAppLink(phone, tx.customer_name, tx.voucher, tx.profile, tx.expires_at);
+                const expiryText = tx.expires_at ? new Date(tx.expires_at).toLocaleString() : 'N/A';
+                return `
+                    <tr>
+                        <td><small class="text-muted font-monospace">${escapeHtml(tx.reference || 'N/A')}</small></td>
+                        <td>${new Date(tx.paid_at || Date.now()).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</td>
+                        <td class="fw-semibold">${escapeHtml(tx.customer_name || 'Customer')}</td>
+                        <td>${phone ? `<code>${escapeHtml(phone)}</code>` : '<span class="text-muted small">None</span>'}</td>
+                        <td><span class="badge bg-light text-dark border">${escapeHtml(tx.profile || 'Pass')}</span></td>
+                        <td class="fw-bold text-success">₦${Number(tx.amount || 0).toLocaleString()}</td>
+                        <td>
+                            <span class="voucher-badge">${escapeHtml(tx.voucher || 'N/A')}</span>
+                            <button class="btn btn-sm btn-link p-0 ms-1 text-secondary" title="Copy" onclick="copyToClipboard('${tx.voucher}')"><i class="fa-regular fa-copy"></i></button>
+                        </td>
+                        <td class="small text-secondary">${expiryText}</td>
+                        <td>
+                            ${phone ? `<a href="${waLink}" target="_blank" class="btn-whatsapp"><i class="fa-brands fa-whatsapp"></i> Send Voucher</a>` : '<span class="text-muted small">No Phone</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterTransactions() {
+            const q = document.getElementById('txSearchInput').value.toLowerCase().trim();
+            if (!q) return renderTransactionsTable(allTransactions);
+            const filtered = allTransactions.filter(t => 
+                (t.reference && t.reference.toLowerCase().includes(q)) ||
+                (t.customer_name && t.customer_name.toLowerCase().includes(q)) ||
+                (t.customer_phone && t.customer_phone.includes(q)) ||
+                (t.voucher && t.voucher.toLowerCase().includes(q))
+            );
+            renderTransactionsTable(filtered);
+        }
+
+        function exportTransactionsCSV() {
+            if (!allTransactions || allTransactions.length === 0) return alert('No transactions to export.');
+            let csv = 'Reference,Date,CustomerName,Phone,Package,Amount,Voucher,ValidUntil\n';
+            allTransactions.forEach(t => {
+                csv += `"${t.reference}","${t.paid_at}","${t.customer_name || ''}","${t.customer_phone || ''}","${t.profile}","${t.amount}","${t.voucher}","${t.expires_at || ''}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `novalink_transactions_${Date.now()}.csv`;
+            a.click();
+        }
+
+        // WhatsApp Helper
+        function buildWhatsAppLink(phone, name, voucher, plan, expiresAt) {
+            if (!phone) return '#';
+            let cleanPhone = phone.replace(/[^0-9]/g, '');
+            if (cleanPhone.startsWith('0')) cleanPhone = '234' + cleanPhone.substring(1);
+            if (!cleanPhone.startsWith('234') && cleanPhone.length === 10) cleanPhone = '234' + cleanPhone;
+
+            const expiryFormatted = expiresAt ? new Date(expiresAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'As indicated';
+            const msg = `⚡ *NovaLink Wi-Fi Internet Access*\n\nHello *${name || 'Customer'}*, thank you for choosing NovaLink!\n\n🎫 *Your Access Voucher:* *${voucher}*\n📦 *Plan:* ${plan}\n⏳ *Valid Until:* ${expiryFormatted}\n\n*How to Connect:*\n1. Connect your device to *NovaLink* Wi-Fi\n2. Open http://192.168.88.1\n3. Enter your voucher code *${voucher}* and click Connect!`;
+            return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+        }
+
+        // 3. VOUCHER MANAGER
+        async function loadVouchers() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/vouchers?pin=${adminPin}`);
+                const data = await res.json();
+                if (data.status && data.vouchers) {
+                    allVouchers = data.vouchers;
+                    renderVouchersTable(allVouchers);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderVouchersTable(list) {
+            const tbody = document.getElementById('vouchersInventoryBody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No vouchers generated yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(v => {
+                const isPaid = v.source === 'PAYSTACK';
+                return `
+                    <tr>
+                        <td>
+                            <span class="voucher-badge">${escapeHtml(v.code)}</span>
+                            <button class="btn btn-sm btn-link p-0 ms-1 text-secondary" title="Copy" onclick="copyToClipboard('${v.code}')"><i class="fa-regular fa-copy"></i></button>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">${escapeHtml(v.profile || 'Pass')}</span></td>
+                        <td class="fw-bold">₦${Number(v.price || 0).toLocaleString()}</td>
+                        <td class="small text-secondary">${new Date(v.created_at || Date.now()).toLocaleDateString()}</td>
+                        <td class="small text-secondary">${v.expires_at ? new Date(v.expires_at).toLocaleDateString() : 'N/A'}</td>
+                        <td><span class="badge ${isPaid ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-secondary-subtle text-secondary border'}">${escapeHtml(v.source || 'CASH')}</span></td>
+                        <td><span class="badge bg-success-subtle text-success border border-success-subtle">Active</span></td>
+                        <td>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteVoucher('${v.code}')" title="Revoke">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterVouchers() {
+            const q = document.getElementById('voucherSearchInput').value.toLowerCase().trim();
+            if (!q) return renderVouchersTable(allVouchers);
+            const filtered = allVouchers.filter(v => v.code.toLowerCase().includes(q) || (v.profile && v.profile.toLowerCase().includes(q)));
+            renderVouchersTable(filtered);
+        }
+
+        async function handleGenerateBatch(e) {
+            e.preventDefault();
+            const pkg = document.getElementById('batchPkgSelect').value;
+            const qty = document.getElementById('batchQtyInput').value;
+            const btn = document.getElementById('batchGenBtn');
 
             btn.disabled = true;
-            btn.innerText = "Verifying...";
-            resultBox.className = "mt-3 alert alert-info";
-            resultBox.innerHTML = "Querying Paystack live servers...";
-            resultBox.classList.remove('d-none');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Generating...';
 
             try {
-                const res = await fetch(`${bridgeUrl}/api/admin/verify-payment`, {
+                const res = await fetch(`${API_BASE}/api/admin/generate-vouchers`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: currentPin, reference: ref })
+                    body: JSON.stringify({ pin: adminPin, package: pkg, quantity: qty })
                 });
-
                 const data = await res.json();
                 btn.disabled = false;
-                btn.innerText = "Verify Transaction";
+                btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i> Generate & Sync to Router';
+
+                if (data.status && data.vouchers) {
+                    renderPrintableSlips(data.vouchers);
+                    loadVouchers();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to generate vouchers'));
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i> Generate & Sync to Router';
+                alert('Connection error: ' + err.message);
+            }
+        }
+
+        function renderPrintableSlips(vouchers) {
+            const container = document.getElementById('printableArea');
+            container.innerHTML = vouchers.map(v => `
+                <div class="col-6 col-md-4 col-print">
+                    <div class="voucher-ticket">
+                        <small class="text-muted fw-bold d-block">⚡ NOVALINK WI-FI</small>
+                        <div class="ticket-code">${escapeHtml(v.code)}</div>
+                        <div class="fw-bold text-dark">₦${v.price || 100}</div>
+                        <small class="text-secondary d-block">${escapeHtml(v.profile || 'Pass')}</small>
+                        <div style="font-size: 10px; color: #64748b; margin-top: 6px;">Portal: http://192.168.88.1</div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('vouchersSlipCard').classList.remove('d-none');
+            document.getElementById('vouchersSlipCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteVoucher(code) {
+            if (!confirm(`Revoke and delete voucher code ${code}?`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/delete-voucher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: adminPin, code: code })
+                });
+                const data = await res.json();
+                if (data.status && data.success) {
+                    loadVouchers();
+                } else {
+                    alert('Failed to delete voucher');
+                }
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        // 4. ACTIVE USERS
+        async function loadActiveUsers() {
+            const tbody = document.getElementById('activeUsersBody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Fetching live sessions from router...</td></tr>';
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/active-users?pin=${adminPin}`);
+                const data = await res.json();
+                if (data.status && data.users) {
+                    if (data.users.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No active devices currently online.</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = data.users.map(u => `
+                        <tr>
+                            <td><span class="voucher-badge">${escapeHtml(u.user || 'Unknown')}</span></td>
+                            <td><code>${escapeHtml(u.address || 'N/A')}</code></td>
+                            <td><small class="text-secondary">${escapeHtml(u['mac-address'] || 'N/A')}</small></td>
+                            <td><span class="badge bg-light text-dark border">${escapeHtml(u.uptime || 'N/A')}</span></td>
+                            <td class="text-primary">${escapeHtml(u['bytes-out'] ? formatBytes(u['bytes-out']) : '0 B')}</td>
+                            <td class="text-success">${escapeHtml(u['bytes-in'] ? formatBytes(u['bytes-in']) : '0 B')}</td>
+                            <td>
+                                <button class="btn btn-outline-danger btn-sm" onclick="disconnectUser('${u['.id']}', '${u.user}')">
+                                    <i class="fa-solid fa-user-xmark me-1"></i> Disconnect
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Failed to fetch router sessions. Check router connection.</td></tr>';
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function disconnectUser(id, username) {
+            if (!confirm(`Disconnect user "${username}" from the hotspot?`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/disconnect-user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: adminPin, id: id, user: username })
+                });
+                const data = await res.json();
+                if (data.status) {
+                    loadActiveUsers();
+                } else {
+                    alert('Error disconnecting user: ' + (data.error || 'Failed'));
+                }
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        // 5. PACKAGES & PRICING
+        async function loadPlans() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/plans?pin=${adminPin}`);
+                const data = await res.json();
+                if (data.status && data.plans) {
+                    allPlans = data.plans;
+                    renderPlansCards(allPlans);
+                    populatePlanSelects(allPlans);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderPlansCards(plans) {
+            const container = document.getElementById('plansContainer');
+            container.innerHTML = plans.map(p => `
+                <div class="col-md-6 col-xl-3">
+                    <div class="card-custom p-4 h-100 position-relative">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="fw-bold mb-0">${escapeHtml(p.name)}</h5>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">₦${p.price.toLocaleString()}</span>
+                        </div>
+                        <p class="text-secondary small mb-3">Duration: <strong>${escapeHtml(p.duration || p.durationHours + 'h')}</strong></p>
+                        <div class="small mb-3">
+                            <div><i class="fa-solid fa-gauge text-muted me-2"></i> Speed: <strong>${escapeHtml(p.speed || 'Unlimited')}</strong></div>
+                            <div><i class="fa-solid fa-network-wired text-muted me-2"></i> Profile: <code>${escapeHtml(p.profile)}</code></div>
+                        </div>
+                        <div class="mt-auto pt-2 border-top d-flex justify-content-between">
+                            <button class="btn btn-outline-danger btn-sm" onclick="deletePlan('${p.id}')">
+                                <i class="fa-solid fa-trash me-1"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populatePlanSelects(plans) {
+            const select = document.getElementById('batchPkgSelect');
+            select.innerHTML = plans.map(p => `<option value="${p.profile}">${escapeHtml(p.name)} (₦${p.price})</option>`).join('');
+        }
+
+        function showAddPlanModal() {
+            document.getElementById('planForm').reset();
+            const modal = new bootstrap.Modal(document.getElementById('planModal'));
+            modal.show();
+        }
+
+        async function handleSavePlan(e) {
+            e.preventDefault();
+            const plan = {
+                id: document.getElementById('planProfileInput').value.trim(),
+                name: document.getElementById('planNameInput').value.trim(),
+                profile: document.getElementById('planProfileInput').value.trim(),
+                price: Number(document.getElementById('planPriceInput').value),
+                duration: document.getElementById('planDurationInput').value + ' Hours',
+                durationHours: Number(document.getElementById('planDurationInput').value),
+                speed: document.getElementById('planSpeedInput').value.trim() || 'Standard',
+                active: true
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/plans`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: adminPin, plan: plan })
+                });
+                const data = await res.json();
+                if (data.status) {
+                    bootstrap.Modal.getInstance(document.getElementById('planModal')).hide();
+                    loadPlans();
+                } else {
+                    alert('Failed to save plan: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function deletePlan(id) {
+            if (!confirm(`Delete package "${id}"? It will no longer show on the captive portal.`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/delete-plan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: adminPin, id: id })
+                });
+                const data = await res.json();
+                if (data.status) {
+                    loadPlans();
+                }
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        // 6. PAYMENT VERIFIER
+        async function handleManualVerify(e) {
+            e.preventDefault();
+            const ref = document.getElementById('verifyRefInput').value.trim();
+            const box = document.getElementById('verifyResultBox');
+            const btn = document.getElementById('verifyBtn');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Checking...';
+            box.className = 'card-custom p-4 mt-4 alert alert-info';
+            box.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-2"></i> Querying Paystack live servers...';
+            box.classList.remove('d-none');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/verify-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: adminPin, reference: ref })
+                });
+                const data = await res.json();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass me-1"></i> Query Paystack';
 
                 if (data.status && data.success) {
-                    resultBox.className = "mt-3 alert alert-success";
-                    resultBox.innerHTML = `
-                        <h6 class="fw-bold mb-2">✅ Payment Confirmed!</h6>
-                        <div><strong>Customer:</strong> ${data.customer_name} (${data.customer_email || 'N/A'})</div>
-                        <div><strong>Amount Paid:</strong> ₦${data.amount} via ${data.channel}</div>
-                        <div><strong>Package:</strong> ${data.profile}</div>
-                        <div class="mt-3 p-3 bg-white border rounded text-center">
-                            <small class="text-muted d-block">NOVALINK ACCESS VOUCHER</small>
-                            <div class="voucher-code text-primary" style="font-size: 28px; font-weight: bold; letter-spacing: 3px;">${data.voucher}</div>
-                            <button class="btn btn-outline-primary btn-sm mt-1" type="button" onclick="navigator.clipboard.writeText('${data.voucher}'); alert('Voucher code copied: ${data.voucher}');">📋 Copy Voucher Code</button>
+                    const waLink = buildWhatsAppLink(data.customer_phone, data.customer_name, data.voucher, data.profile, data.expires_at);
+                    box.className = 'card-custom p-4 mt-4 bg-white border';
+                    box.innerHTML = `
+                        <div class="d-flex align-items-center text-success mb-3">
+                            <i class="fa-solid fa-circle-check fs-4 me-2"></i>
+                            <h5 class="fw-bold mb-0">Payment Confirmed & Verified</h5>
                         </div>
-                        <div class="mt-2 small text-muted">
-                            ${data.routerProvisioned ? '🟢 Router user account provisioned successfully.' : '⚠️ Router WAN unreachable from cloud. Simply enter code <strong>' + data.voucher + '</strong> in portal login or WinBox.'}
+                        <div class="row g-2 mb-3 small">
+                            <div class="col-6">Customer: <strong>${escapeHtml(data.customer_name)}</strong></div>
+                            <div class="col-6">Phone: <strong>${data.customer_phone ? escapeHtml(data.customer_phone) : 'N/A'}</strong></div>
+                            <div class="col-6">Amount: <strong class="text-success">₦${data.amount}</strong></div>
+                            <div class="col-6">Package: <strong>${escapeHtml(data.profile)}</strong></div>
+                        </div>
+                        <div class="p-3 bg-light rounded text-center mb-3">
+                            <small class="text-muted d-block fw-bold">NOVALINK ACCESS VOUCHER</small>
+                            <div class="ticket-code">${escapeHtml(data.voucher)}</div>
+                            <button class="btn btn-outline-primary btn-sm mt-1" type="button" onclick="copyToClipboard('${data.voucher}')">
+                                <i class="fa-regular fa-copy me-1"></i> Copy Voucher Code
+                            </button>
+                        </div>
+                        <div class="d-flex gap-2">
+                            ${data.customer_phone ? `<a href="${waLink}" target="_blank" class="btn-whatsapp w-100 justify-content-center py-2"><i class="fa-brands fa-whatsapp fs-6"></i> Send Voucher via WhatsApp</a>` : ''}
                         </div>
                     `;
                 } else {
-                    resultBox.className = "mt-3 alert alert-danger";
-                    resultBox.innerText = "Error: " + (data.error || "Payment not verified");
+                    box.className = 'card-custom p-4 mt-4 alert alert-danger';
+                    box.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-2"></i> Error: ${data.error || 'Payment not confirmed'}`;
                 }
             } catch (err) {
                 btn.disabled = false;
-                btn.innerText = "Verify Transaction";
-                resultBox.className = "mt-3 alert alert-danger";
-                resultBox.innerText = "Connection error: " + err.message;
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass me-1"></i> Query Paystack';
+                box.className = 'card-custom p-4 mt-4 alert alert-danger';
+                box.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-2"></i> Failed to connect: ${err.message}`;
             }
+        }
+
+        // Utilities
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            alert(`Voucher code copied to clipboard: ${text}`);
+        }
+
+        function formatBytes(bytes) {
+            const b = parseInt(bytes) || 0;
+            if (b < 1024) return b + ' B';
+            if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+            if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+            return (b / 1073741824).toFixed(2) + ' GB';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     </script>
 </body>

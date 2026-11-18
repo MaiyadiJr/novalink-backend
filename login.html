@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NovaLink - High-Speed Internet Access</title>
+    <!-- Paystack Inline JS -->
     <script src="https://js.paystack.co/v1/inline.js"></script>
+    <!-- FontAwesome 6 Free Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        * { box-sizing: border-box; }
         body {
             background-color: #0d1117 !important;
             color: #c9d1d9 !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -22,128 +26,279 @@
             max-width: 440px;
             background: #161b22 !important;
             border: 1px solid #30363d !important;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.6);
         }
         .logo {
             text-align: center;
             font-size: 24px;
-            font-weight: 700;
+            font-weight: 800;
             color: #fff !important;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
-        .logo span { color: #58a6ff; }
+        .logo span { color: #38bdf8; }
         .alert {
             padding: 12px 16px;
             border-radius: 8px;
             margin-bottom: 20px;
-            font-size: 14px;
+            font-size: 13px;
             display: none;
             text-align: center;
         }
         .alert.error { background: #f851491a; border: 1px solid #f85149; color: #ff7b72; display: block; }
         .alert.success { background: #2386361a; border: 1px solid #238636; color: #3fb950; display: block; }
+        
+        .recent-voucher-card {
+            background: #1e293b;
+            border: 1px solid #38bdf8;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+
         .section-title {
-            font-size: 13px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: #8b949e;
             margin-bottom: 12px;
-            font-weight: 600;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         .plans-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
         .plan-card {
             background: #21262d;
             border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 16px;
+            border-radius: 10px;
+            padding: 14px;
             cursor: pointer;
             transition: all 0.2s ease;
             text-align: left;
+            position: relative;
         }
-        .plan-card:hover { border-color: #58a6ff; transform: translateY(-2px); }
-        .plan-name { font-weight: 600; font-size: 14px; color: #fff; margin-bottom: 4px; }
-        .plan-price { font-size: 15px; font-weight: 700; color: #3fb950; }
+        .plan-card:hover {
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+            background: #1e293b;
+        }
+        .plan-name { font-weight: 600; font-size: 13px; color: #f0f6fc; margin-bottom: 4px; }
+        .plan-price { font-size: 16px; font-weight: 800; color: #3fb950; }
+        .plan-speed { font-size: 11px; color: #8b949e; margin-top: 2px; }
+        
         .divider {
             text-align: center;
             border-bottom: 1px solid #30363d;
             line-height: 0.1em;
-            margin: 24px 0;
+            margin: 24px 0 20px;
         }
         .divider span { background: #161b22; padding: 0 10px; color: #8b949e; font-size: 12px; text-transform: uppercase; }
-        .form-group { margin-bottom: 16px; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-label { display: block; font-size: 12px; color: #8b949e; margin-bottom: 6px; font-weight: 600; }
         .form-control {
             width: 100%;
-            padding: 12px 16px;
+            padding: 12px 14px;
             background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 6px;
+            border-radius: 8px;
             color: #fff;
-            font-size: 15px;
+            font-size: 14px;
             outline: none;
+            transition: border-color 0.2s;
         }
-        .form-control:focus { border-color: #58a6ff; }
-        .btn {
+        .form-control:focus { border-color: #38bdf8; }
+
+        .btn-primary-action {
             width: 100%;
             padding: 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             border: none;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 700;
             cursor: pointer;
             background: #238636;
             color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s;
         }
-        .btn:hover { background: #2ea043; }
-        .loading-overlay { display: none; text-align: center; padding: 20px; }
+        .btn-primary-action:hover { background: #2ea043; }
+
+        .loading-overlay { display: none; text-align: center; padding: 30px 20px; }
         .spinner {
             border: 3px solid rgba(255,255,255,0.1);
-            width: 36px;
-            height: 36px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
-            border-left-color: #58a6ff;
+            border-left-color: #38bdf8;
             animation: spin 1s linear infinite;
-            margin: 0 auto 12px auto;
+            margin: 0 auto 16px auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* RECEIPT CARD STYLING */
+        #receipt-view { display: none; text-align: center; }
+        .receipt-badge {
+            width: 56px;
+            height: 56px;
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin: 0 auto 16px;
+        }
+        .voucher-box {
+            background: #0d1117;
+            border: 2px dashed #38bdf8;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .voucher-code-large {
+            font-family: monospace;
+            font-size: 28px;
+            font-weight: 800;
+            color: #38bdf8;
+            letter-spacing: 3px;
+            margin: 4px 0 8px;
+        }
+        .receipt-details {
+            background: #21262d;
+            border-radius: 8px;
+            padding: 12px 14px;
+            text-align: left;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            color: #c9d1d9;
+        }
+        .receipt-row span.label { color: #8b949e; }
+        .receipt-row span.val { font-weight: 600; }
+        .btn-whatsapp-receipt {
+            width: 100%;
+            background: #25d366;
+            color: #fff;
+            text-decoration: none;
+            padding: 11px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .btn-whatsapp-receipt:hover { background: #1ebd5a; color: #fff; }
+        .btn-connect-now {
+            width: 100%;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-connect-now:hover { background: #1d4ed8; }
+        .countdown-text {
+            font-size: 12px;
+            color: #8b949e;
+            margin-top: 10px;
+        }
+        .countdown-text a { color: #38bdf8; text-decoration: none; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="logo">NOVA<span>LINK</span></div>
+    <div class="logo">
+        <i class="fa-solid fa-bolt text-info"></i>
+        <div>NOVA<span>LINK</span></div>
+    </div>
 
     <div id="alert-box" class="alert"></div>
 
+    <!-- RECENT ACTIVE VOUCHER REMINDER -->
+    <div id="recent-voucher-box" class="recent-voucher-card">
+        <div>
+            <div style="font-size: 11px; color: #38bdf8; text-transform: uppercase; font-weight: 700;">Recent Voucher</div>
+            <div id="recent-code" style="font-family: monospace; font-size: 15px; font-weight: 700; color: #fff;"></div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-info" onclick="useRecentVoucher()" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #38bdf8; background: transparent; color: #38bdf8; font-weight: 600; cursor: pointer;">
+            Use Code
+        </button>
+    </div>
+
+    <!-- 1. MAIN PORTAL VIEW -->
     <div id="main-view">
-        <div class="section-title">Instant Online Access</div>
-        <div class="plans-grid">
-            <div class="plan-card" onclick="initPaystack('1-Hour-3Mbps', 100)">
+        <div class="section-title">
+            <i class="fa-solid fa-cart-shopping text-primary"></i> Buy Internet Pass Online
+        </div>
+
+        <!-- CUSTOMER PHONE NUMBER INPUT FOR WHATSAPP -->
+        <div class="form-group">
+            <label class="form-label" for="customer-phone">
+                <i class="fa-brands fa-whatsapp text-success me-1"></i> WhatsApp Phone Number (to receive voucher & expiry):
+            </label>
+            <input type="tel" id="customer-phone" class="form-control" placeholder="e.g. 08012345678" autocomplete="tel">
+        </div>
+
+        <div class="plans-grid" id="portal-plans-container">
+            <!-- Loaded dynamically from /api/plans or fallbacks -->
+            <div class="plan-card" onclick="selectPlan('1-Hour-3Mbps', 100)">
                 <div class="plan-name">1 Hour Pass</div>
-                <div class="plan-price">NGN 100</div>
+                <div class="plan-price">₦100</div>
+                <div class="plan-speed"><i class="fa-solid fa-gauge me-1"></i>3 Mbps Speed</div>
             </div>
-            <div class="plan-card" onclick="initPaystack('24-Hours-5Mbps', 200)">
+            <div class="plan-card" onclick="selectPlan('24-Hours-5Mbps', 200)">
                 <div class="plan-name">24 Hours Pass</div>
-                <div class="plan-price">NGN 200</div>
+                <div class="plan-price">₦200</div>
+                <div class="plan-speed"><i class="fa-solid fa-gauge me-1"></i>5 Mbps Speed</div>
             </div>
-            <div class="plan-card" onclick="initPaystack('7-Days-5Mbps', 1200)">
+            <div class="plan-card" onclick="selectPlan('7-Days-5Mbps', 1200)">
                 <div class="plan-name">7 Days Pass</div>
-                <div class="plan-price">NGN 1,200</div>
+                <div class="plan-price">₦1,200</div>
+                <div class="plan-speed"><i class="fa-solid fa-gauge me-1"></i>5 Mbps Speed</div>
             </div>
-            <div class="plan-card" onclick="initPaystack('1-Month-5Mbps', 3000)">
+            <div class="plan-card" onclick="selectPlan('1-Month-5Mbps', 3000)">
                 <div class="plan-name">1 Month Pass</div>
-                <div class="plan-price">NGN 3,000</div>
+                <div class="plan-price">₦3,000</div>
+                <div class="plan-speed"><i class="fa-solid fa-gauge me-1"></i>5 Mbps Speed</div>
             </div>
         </div>
 
-        <div class="divider"><span>Or Voucher Code</span></div>
+        <div class="divider"><span>Or Enter Voucher</span></div>
 
         <form name="login" action="$(link-login)" method="post" $(if chap-id)onSubmit="return doLogin()"$(endif)>
             <input type="hidden" name="username" id="router-username">
@@ -152,15 +307,69 @@
             <input type="hidden" name="popup" value="true">
 
             <div class="form-group">
-                <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code (e.g. NV-XXXX)" autocomplete="off">
+                <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code (e.g. NV-XXXXXX)" autocomplete="off">
             </div>
-            <button type="button" class="btn" onclick="submitVoucher()">Connect to Internet</button>
+            <button type="button" class="btn-primary-action" onclick="submitVoucher()">
+                <i class="fa-solid fa-wifi"></i> Connect to Internet
+            </button>
         </form>
     </div>
 
+    <!-- 2. LOADING VIEW -->
     <div id="loading-view" class="loading-overlay">
         <div class="spinner"></div>
-        <div id="loading-text" style="font-weight: 500; font-size: 14px; color: #c9d1d9;">Processing payment... Please wait.</div>
+        <div id="loading-text" style="font-weight: 600; font-size: 14px; color: #f0f6fc;">Processing payment... Please wait.</div>
+        <small class="text-secondary d-block mt-2">Do not close this window</small>
+    </div>
+
+    <!-- 3. SUCCESS RECEIPT CARD VIEW -->
+    <div id="receipt-view">
+        <div class="receipt-badge">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <h4 style="font-weight: 800; color: #f0f6fc; margin: 0 0 6px;">Payment Confirmed!</h4>
+        <p style="font-size: 13px; color: #8b949e; margin: 0 0 16px;">Here is your NovaLink internet voucher:</p>
+
+        <div class="voucher-box">
+            <div style="font-size: 11px; text-transform: uppercase; color: #8b949e; font-weight: 700;">Access Voucher Code</div>
+            <div id="receipt-voucher-code" class="voucher-code-large">NV-XXXXXX</div>
+            <button type="button" id="copy-btn" class="btn btn-sm btn-outline-info" onclick="copyReceiptVoucher()" style="font-size: 12px; padding: 4px 14px; border-radius: 6px; border: 1px solid #38bdf8; background: transparent; color: #38bdf8; font-weight: 600; cursor: pointer;">
+                <i class="fa-regular fa-copy me-1"></i> Copy Code
+            </button>
+        </div>
+
+        <div class="receipt-details">
+            <div class="receipt-row">
+                <span class="label">Package:</span>
+                <span class="val" id="receipt-package">24 Hours Pass</span>
+            </div>
+            <div class="receipt-row">
+                <span class="label">Amount Paid:</span>
+                <span class="val" id="receipt-amount">₦200</span>
+            </div>
+            <div class="receipt-row">
+                <span class="label">Valid Until:</span>
+                <span class="val text-warning" id="receipt-expires">Tomorrow</span>
+            </div>
+            <div class="receipt-row">
+                <span class="label">Reference:</span>
+                <span class="val font-monospace" id="receipt-ref" style="font-size: 11px;">NV_REF_...</span>
+            </div>
+        </div>
+
+        <!-- WHATSAPP RECEIPT BUTTON -->
+        <a href="#" id="receipt-wa-btn" target="_blank" class="btn-whatsapp-receipt">
+            <i class="fa-brands fa-whatsapp fs-5"></i> Save / Send to My WhatsApp
+        </a>
+
+        <!-- CONNECT NOW BUTTON -->
+        <button type="button" class="btn-connect-now" onclick="executeAutoLogin()">
+            <i class="fa-solid fa-rocket"></i> Connect to Internet Now
+        </button>
+
+        <div class="countdown-text" id="auto-connect-countdown">
+            Connecting automatically in <span id="timer-sec">10</span>s... <a onclick="cancelAutoConnect()">[Pause]</a>
+        </div>
     </div>
 </div>
 
@@ -177,19 +386,68 @@ $(endif)
 <script>
     const RENDER_BACKEND_URL = "https://novalink-backend-uyja.onrender.com";
     const LIVE_PAYSTACK_KEY = "pk_live_ab9b1227fa13a8ea813843f6975ba59426220265";
+    let activeVoucherData = null;
+    let autoConnectTimer = null;
+    let secondsRemaining = 10;
 
     window.onload = function() {
+        // Check router authentication error params
         const urlParams = new URLSearchParams(window.location.search);
         const error = urlParams.get('error');
         if (error) {
-            showAlert("Invalid Voucher or Authentication Failed. Please try again.", "error");
+            showAlert("Voucher code invalid, expired, or authentication failed. Please try again.", "error");
         }
+
+        // Check recent voucher in localStorage
+        try {
+            const stored = localStorage.getItem('novalink_recent_voucher');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed && parsed.code) {
+                    document.getElementById('recent-code').innerText = parsed.code + (parsed.plan ? ` (${parsed.plan})` : '');
+                    document.getElementById('recent-voucher-box').style.display = 'flex';
+                }
+            }
+        } catch (e) {}
+
+        // Fetch dynamic packages
+        fetch(`${RENDER_BACKEND_URL}/api/plans`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status && data.plans && data.plans.length > 0) {
+                    renderPlans(data.plans);
+                }
+            })
+            .catch(() => {});
     };
+
+    function renderPlans(plans) {
+        const container = document.getElementById('portal-plans-container');
+        container.innerHTML = plans.map(p => `
+            <div class="plan-card" onclick="selectPlan('${p.profile}', ${p.price}, '${escapeHtml(p.name)}')">
+                <div class="plan-name">${escapeHtml(p.name)}</div>
+                <div class="plan-price">₦${p.price.toLocaleString()}</div>
+                <div class="plan-speed"><i class="fa-solid fa-gauge me-1"></i>${escapeHtml(p.speed || p.duration)}</div>
+            </div>
+        `).join('');
+    }
+
+    function useRecentVoucher() {
+        try {
+            const stored = JSON.parse(localStorage.getItem('novalink_recent_voucher'));
+            if (stored && stored.code) {
+                document.getElementById('voucher-input').value = stored.code;
+                submitVoucher();
+            }
+        } catch (e) {}
+    }
 
     function showAlert(message, type) {
         const box = document.getElementById('alert-box');
+        if (!message) { box.style.display = 'none'; return; }
         box.className = `alert ${type}`;
         box.innerText = message;
+        box.style.display = 'block';
     }
 
     function submitVoucher() {
@@ -207,11 +465,21 @@ $(endif)
         document.login.submit();
     }
 
-    function initPaystack(pkgKey, amount) {
+    function selectPlan(pkgKey, amount, pkgName) {
+        const phone = document.getElementById('customer-phone').value.trim();
+        if (!phone) {
+            showAlert("Please enter your WhatsApp Phone Number so we can send you your voucher & expiration info.", "error");
+            document.getElementById('customer-phone').focus();
+            return;
+        }
+        initPaystack(pkgKey, amount, phone, pkgName);
+    }
+
+    function initPaystack(pkgKey, amount, phone, pkgName) {
         showAlert("", "clear");
         document.getElementById('main-view').style.display = 'none';
         document.getElementById('loading-view').style.display = 'block';
-        document.getElementById('loading-text').innerText = "Opening payment window...";
+        document.getElementById('loading-text').innerText = "Opening secure payment window...";
 
         const reference = `NV_REF_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
@@ -219,20 +487,21 @@ $(endif)
             let handler = PaystackPop.setup({
                 key: LIVE_PAYSTACK_KEY,
                 email: `customer_${Date.now()}@novalink.com`,
-                amount: amount * 100,
+                amount: Math.round(amount * 100),
                 ref: reference,
                 metadata: {
                     package: pkgKey,
+                    phone: phone,
                     mac: "$(mac)"
                 },
                 callback: function(response) {
-                    document.getElementById('loading-text').innerText = "Payment complete! Generating your voucher...";
-                    pollForVoucher(response.reference);
+                    document.getElementById('loading-text').innerText = "Payment confirmed! Generating your access voucher...";
+                    pollForVoucher(response.reference, pkgKey, amount, phone);
                 },
                 onClose: function() {
                     document.getElementById('main-view').style.display = 'block';
                     document.getElementById('loading-view').style.display = 'none';
-                    showAlert("Payment window closed.", "error");
+                    showAlert("Payment cancelled.", "error");
                 }
             });
             handler.openIframe();
@@ -244,9 +513,9 @@ $(endif)
         }
     }
 
-    async function pollForVoucher(reference) {
+    async function pollForVoucher(reference, pkgKey, amount, phone) {
         let attempts = 0;
-        const maxAttempts = 30; // 60 seconds total
+        const maxAttempts = 30; // 60s
 
         const interval = setInterval(async () => {
             attempts++;
@@ -256,22 +525,108 @@ $(endif)
 
                 if (data.status === 'success' && data.voucher) {
                     clearInterval(interval);
-                    document.getElementById('loading-text').innerText = "Enjoy Your Network! Logging you in...";
                     
-                    setTimeout(() => {
-                        document.getElementById('router-username').value = data.voucher;
-                        document.getElementById('router-password').value = data.voucher;
-                        if (typeof doLogin === 'function') { doLogin(); }
-                        document.login.submit();
-                    }, 1500);
+                    // Show Receipt Card with voucher info
+                    showReceiptCard({
+                        voucher: data.voucher,
+                        package: data.profile || pkgKey,
+                        amount: amount,
+                        expires_at: data.expires_at,
+                        phone: phone || data.phone || '',
+                        reference: reference
+                    });
+
                 } else if (attempts >= maxAttempts) {
                     clearInterval(interval);
                     document.getElementById('main-view').style.display = 'block';
                     document.getElementById('loading-view').style.display = 'none';
-                    showAlert("Payment confirmed, but voucher generation timed out. Ref: " + reference, "error");
+                    showAlert("Payment confirmed, but voucher generation took longer than usual. Please save your reference: " + reference, "error");
                 }
             } catch (e) {}
         }, 2000);
+    }
+
+    function showReceiptCard(data) {
+        activeVoucherData = data;
+        document.getElementById('loading-view').style.display = 'none';
+        document.getElementById('main-view').style.display = 'none';
+        document.getElementById('receipt-view').style.display = 'block';
+
+        document.getElementById('receipt-voucher-code').innerText = data.voucher;
+        document.getElementById('receipt-package').innerText = data.package;
+        document.getElementById('receipt-amount').innerText = `₦${Number(data.amount).toLocaleString()}`;
+        document.getElementById('receipt-ref').innerText = data.reference;
+
+        const expiryDate = data.expires_at ? new Date(data.expires_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Based on usage';
+        document.getElementById('receipt-expires').innerText = expiryDate;
+
+        // Save voucher to localStorage for future return
+        localStorage.setItem('novalink_recent_voucher', JSON.stringify({
+            code: data.voucher,
+            plan: data.package,
+            expires: data.expires_at
+        }));
+
+        // Build WhatsApp Message Link
+        let cleanPhone = (data.phone || '').replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '234' + cleanPhone.substring(1);
+        if (!cleanPhone.startsWith('234') && cleanPhone.length === 10) cleanPhone = '234' + cleanPhone;
+
+        const msg = `⚡ *NovaLink Wi-Fi Voucher*\n\nHere is your internet access receipt:\n🎫 *Voucher:* *${data.voucher}*\n📦 *Plan:* ${data.package}\n💰 *Amount:* ₦${data.amount}\n⏳ *Valid Until:* ${expiryDate}\n\n*How to Connect:*\nConnect to NovaLink Wi-Fi and enter *${data.voucher}* at http://192.168.88.1`;
+        const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        document.getElementById('receipt-wa-btn').href = waUrl;
+
+        // Start Countdown Timer
+        secondsRemaining = 10;
+        document.getElementById('timer-sec').innerText = secondsRemaining;
+        autoConnectTimer = setInterval(() => {
+            secondsRemaining--;
+            if (secondsRemaining <= 0) {
+                clearInterval(autoConnectTimer);
+                executeAutoLogin();
+            } else {
+                document.getElementById('timer-sec').innerText = secondsRemaining;
+            }
+        }, 1000);
+    }
+
+    function cancelAutoConnect() {
+        if (autoConnectTimer) clearInterval(autoConnectTimer);
+        document.getElementById('auto-connect-countdown').innerHTML = '<span class="text-info"><i class="fa-solid fa-circle-pause me-1"></i> Auto-connect paused. Click "Connect Now" when ready.</span>';
+    }
+
+    function copyReceiptVoucher() {
+        if (!activeVoucherData) return;
+        navigator.clipboard.writeText(activeVoucherData.voucher);
+        const btn = document.getElementById('copy-btn');
+        btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Copied!';
+        btn.style.color = '#3fb950';
+        btn.style.borderColor = '#3fb950';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fa-regular fa-copy me-1"></i> Copy Code';
+            btn.style.color = '#38bdf8';
+            btn.style.borderColor = '#38bdf8';
+        }, 2500);
+    }
+
+    function executeAutoLogin() {
+        if (autoConnectTimer) clearInterval(autoConnectTimer);
+        if (!activeVoucherData || !activeVoucherData.voucher) return;
+
+        document.getElementById('router-username').value = activeVoucherData.voucher;
+        document.getElementById('router-password').value = activeVoucherData.voucher;
+
+        if (typeof doLogin === 'function') {
+            try { doLogin(); } catch(e) {}
+        }
+        document.login.submit();
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 </script>
 

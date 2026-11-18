@@ -3,6 +3,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const axios = require('axios');
 const https = require('https');
+const store = require('./storage');
 
 // Load environment variables for local testing (Render injects these automatically)
 try { require('dotenv').config(); } catch (e) {}
@@ -78,6 +79,23 @@ const PROFILE_MAP = {
     'default': 'default'
 };
 
+// Calculate expiration date string based on package profile
+function calculateExpiry(pkgProfile) {
+    const plan = store.getPlanById(pkgProfile);
+    let hours = 1;
+    if (plan && plan.durationHours) {
+        hours = plan.durationHours;
+    } else if (pkgProfile.includes('24-Hour')) {
+        hours = 24;
+    } else if (pkgProfile.includes('7-Day')) {
+        hours = 168;
+    } else if (pkgProfile.includes('1-Month')) {
+        hours = 720;
+    }
+    const expiry = new Date(Date.now() + hours * 3600 * 1000);
+    return expiry.toISOString();
+}
+
 // Helper Function: Add User to MikroTik Hotspot via REST API
 async function createMikrotikUser(username, password, profile) {
     const targetProfile = PROFILE_MAP[profile] || profile || 'default';
@@ -112,11 +130,18 @@ async function createMikrotikUser(username, password, profile) {
 }
 
 // -------------------------------------------------------------------
+// PUBLIC PLANS API
+// -------------------------------------------------------------------
+app.get('/api/plans', (req, res) => {
+    res.json({ status: true, plans: store.getPlans() });
+});
+
+// -------------------------------------------------------------------
 // 1. INITIALIZE PAYMENT ENDPOINT
 // -------------------------------------------------------------------
 app.post('/api/initialize-payment', async (req, res) => {
     try {
-        const { package: pkg, amount, mac } = req.body;
+        const { package: pkg, amount, mac, phone, name } = req.body;
 
         if (!pkg || !amount) {
             return res.status(400).json({ status: false, error: 'Missing package or amount' });
@@ -127,12 +152,14 @@ app.post('/api/initialize-payment', async (req, res) => {
         const paystackResponse = await axios.post(
             'https://api.paystack.co/transaction/initialize',
             {
-                amount: amount * 100, // Paystack expects amount in Kobo
+                amount: Math.round(Number(amount) * 100), // Paystack expects amount in Kobo
                 email: `customer_${Date.now()}@novalink.com`,
                 reference: reference,
                 metadata: {
                     package: pkg,
-                    mac: mac || 'N/A'
+                    mac: mac || 'N/A',
+                    phone: phone || '',
+                    name: name || 'Customer'
                 }
             },
             {
@@ -178,17 +205,55 @@ app.post('/webhook/paystack', async (req, res) => {
             const reference = data.reference;
             const pkg = data.metadata?.package || '1-Hour-3Mbps';
             const targetProfile = PROFILE_MAP[pkg] || '1-Hour-3Mbps';
+            const customerPhone = data.metadata?.phone || data.customer?.phone || '';
+            const customerName = data.metadata?.name || data.authorization?.sender_name || data.customer?.first_name || 'Customer';
 
-            console.log(`Payment confirmed for reference: ${reference}, Package: ${targetProfile}`);
+            console.log(`Payment confirmed for ref: ${reference}, Pkg: ${targetProfile}, Phone: ${customerPhone}`);
 
             // Generate Voucher Code
             const voucherCode = generateVoucherCode();
+            const expiresAt = calculateExpiry(targetProfile);
 
-            // 1. Queue for MikroTik router sync (works seamlessly through CGNAT!)
+            // Save to persistent storage
+            store.addTransaction({
+                reference: reference,
+                amount: data.amount / 100,
+                channel: data.channel || 'Paystack',
+                customer_name: customerName,
+                customer_email: data.customer?.email || '',
+                customer_phone: customerPhone,
+                package: pkg,
+                profile: targetProfile,
+                voucher: voucherCode,
+                status: 'success',
+                paid_at: data.paid_at || new Date().toISOString(),
+                expires_at: expiresAt,
+                whatsapp_sent: false
+            });
+
+            store.addVoucher({
+                code: voucherCode,
+                profile: targetProfile,
+                price: data.amount / 100,
+                duration: targetProfile,
+                created_at: new Date().toISOString(),
+                expires_at: expiresAt,
+                source: 'PAYSTACK',
+                status: 'active',
+                customer_phone: customerPhone,
+                reference: reference
+            });
+
+            // 1. Queue for MikroTik router sync (CGNAT bypass)
             queueUserForRouter(voucherCode, targetProfile, reference);
 
             // 2. Save in memory for frontend polling
-            voucherStore.set(reference, voucherCode);
+            voucherStore.set(reference, {
+                voucher: voucherCode,
+                profile: targetProfile,
+                expires_at: expiresAt,
+                phone: customerPhone
+            });
 
             // 3. Attempt direct push in background if reachable
             createMikrotikUser(voucherCode, voucherCode, targetProfile).catch(() => {});
@@ -210,11 +275,28 @@ app.get('/api/get-voucher', async (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Missing reference' });
     }
 
-    // 1. Return immediately if already provisioned or queued
+    // 1. Return immediately if already provisioned
     if (voucherStore.has(reference)) {
-        const voucher = voucherStore.get(reference);
-        voucherStore.delete(reference); // Clear after retrieval
-        return res.json({ status: 'success', voucher: voucher });
+        const item = voucherStore.get(reference);
+        return res.json({ 
+            status: 'success', 
+            voucher: item.voucher || item,
+            profile: item.profile || 'Hotspot Pass',
+            expires_at: item.expires_at || null,
+            phone: item.phone || ''
+        });
+    }
+
+    // Check persistent store if webhook already saved it
+    const savedTx = store.getTransactions().find(t => t.reference === reference);
+    if (savedTx && savedTx.status === 'success' && savedTx.voucher) {
+        return res.json({
+            status: 'success',
+            voucher: savedTx.voucher,
+            profile: savedTx.profile,
+            expires_at: savedTx.expires_at,
+            phone: savedTx.customer_phone
+        });
     }
 
     // 2. Direct Paystack Verification Fallback
@@ -224,7 +306,7 @@ app.get('/api/get-voucher', async (req, res) => {
                 `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
                 {
                     headers: { Authorization: `Bearer ${CONFIG.PAYSTACK_SECRET_KEY}` },
-                    timeout: 4000
+                    timeout: 5000
                 }
             );
 
@@ -232,84 +314,194 @@ app.get('/api/get-voucher', async (req, res) => {
                 const data = verifyRes.data.data;
                 const pkg = data.metadata?.package || '1-Hour-3Mbps';
                 const targetProfile = PROFILE_MAP[pkg] || '1-Hour-3Mbps';
+                const customerPhone = data.metadata?.phone || data.customer?.phone || '';
+                const customerName = data.metadata?.name || data.authorization?.sender_name || data.customer?.first_name || 'Customer';
                 const voucherCode = generateVoucherCode();
+                const expiresAt = calculateExpiry(targetProfile);
 
-                console.log(`Direct verification verified payment for ${reference}. Queueing ${voucherCode}...`);
+                console.log(`Direct verification verified payment for ${reference}. Code: ${voucherCode}, Phone: ${customerPhone}`);
+
+                // Save to persistent storage
+                store.addTransaction({
+                    reference: reference,
+                    amount: data.amount / 100,
+                    channel: data.channel || 'Paystack',
+                    customer_name: customerName,
+                    customer_email: data.customer?.email || '',
+                    customer_phone: customerPhone,
+                    package: pkg,
+                    profile: targetProfile,
+                    voucher: voucherCode,
+                    status: 'success',
+                    paid_at: data.paid_at || new Date().toISOString(),
+                    expires_at: expiresAt,
+                    whatsapp_sent: false
+                });
+
+                store.addVoucher({
+                    code: voucherCode,
+                    profile: targetProfile,
+                    price: data.amount / 100,
+                    duration: targetProfile,
+                    created_at: new Date().toISOString(),
+                    expires_at: expiresAt,
+                    source: 'PAYSTACK',
+                    status: 'active',
+                    customer_phone: customerPhone,
+                    reference: reference
+                });
 
                 // 1. Queue for MikroTik router sync
                 queueUserForRouter(voucherCode, targetProfile, reference);
 
-                // 2. Also attempt direct push in background
+                voucherStore.set(reference, {
+                    voucher: voucherCode,
+                    profile: targetProfile,
+                    expires_at: expiresAt,
+                    phone: customerPhone
+                });
+
+                // 2. Attempt direct push in background
                 createMikrotikUser(voucherCode, voucherCode, targetProfile).catch(() => {});
 
-                return res.json({ status: 'success', voucher: voucherCode });
+                return res.json({ 
+                    status: 'success', 
+                    voucher: voucherCode,
+                    profile: targetProfile,
+                    expires_at: expiresAt,
+                    phone: customerPhone
+                });
             }
         }
     } catch (e) {
-        // Ignored during polling while customer is still in checkout
+        // Ignored during polling
     }
 
     res.json({ status: 'pending', message: 'Voucher not ready yet.' });
 });
 
-// Package price map
-const PACKAGE_PRICES = {
-    '1-Hour-2Mbps': 100,
-    '1-Hour': 100,
-    '24-Hours-5Mbps': 500,
-    '24-Hours': 500,
-    '7-Days-5Mbps': 2500,
-    '7-Days': 2500,
-    '1-Month': 3000
-};
-
 // -------------------------------------------------------------------
-// 4. ADMIN: BATCH VOUCHER GENERATION
+// ADMIN ENDPOINTS
 // -------------------------------------------------------------------
-app.post('/api/admin/generate-vouchers', async (req, res) => {
-    const { pin, package: pkg, quantity } = req.body;
 
+// Middleware to protect admin routes with PIN
+function requireAdmin(req, res, next) {
+    const pin = req.headers['x-admin-pin'] || req.query.pin || req.body?.pin;
     if (pin !== CONFIG.ADMIN_PIN) {
-        return res.status(401).json({ status: false, success: false, error: 'Unauthorized PIN' });
+        return res.status(401).json({ status: false, error: 'Unauthorized PIN' });
     }
+    next();
+}
 
+// Admin: Analytics & Stats
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+    try {
+        const stats = store.getStats();
+        let activeUsersCount = 0;
+        try {
+            const activeRes = await mikrotikClient.get('/ip/hotspot/active');
+            activeUsersCount = Array.isArray(activeRes.data) ? activeRes.data.length : 0;
+        } catch (e) {}
+
+        res.json({
+            status: true,
+            stats: {
+                ...stats,
+                activeHotspotUsers: activeUsersCount,
+                pendingSyncCount: pendingRouterUsers.length
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ status: false, error: error.message });
+    }
+});
+
+// Admin: Transactions Log
+app.get('/api/admin/transactions', requireAdmin, (req, res) => {
+    const { search } = req.query;
+    const transactions = store.getTransactions({ search });
+    res.json({ status: true, count: transactions.length, transactions });
+});
+
+// Admin: Vouchers List
+app.get('/api/admin/vouchers', requireAdmin, (req, res) => {
+    const { search, status } = req.query;
+    const vouchers = store.getVouchers({ search, status });
+    res.json({ status: true, count: vouchers.length, vouchers });
+});
+
+// Admin: Delete / Revoke Voucher
+app.post('/api/admin/delete-voucher', requireAdmin, (req, res) => {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ status: false, error: 'Missing voucher code' });
+    const deleted = store.deleteVoucher(code);
+    res.json({ status: true, success: deleted });
+});
+
+// Admin: Manage Plans (Get / Save / Delete)
+app.get('/api/admin/plans', requireAdmin, (req, res) => {
+    res.json({ status: true, plans: store.getAllPlans() });
+});
+
+app.post('/api/admin/plans', requireAdmin, (req, res) => {
+    const plan = req.body.plan;
+    if (!plan || !plan.id || !plan.price) {
+        return res.status(400).json({ status: false, error: 'Invalid plan data' });
+    }
+    store.savePlan(plan);
+    res.json({ status: true, success: true, plan });
+});
+
+app.post('/api/admin/delete-plan', requireAdmin, (req, res) => {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ status: false, error: 'Missing plan ID' });
+    store.deletePlan(id);
+    res.json({ status: true, success: true });
+});
+
+// Admin: Batch Voucher Generation
+app.post('/api/admin/generate-vouchers', requireAdmin, async (req, res) => {
+    const { package: pkg, quantity } = req.body;
     const qty = parseInt(quantity) || 1;
-    const generatedVouchers = [];
     const targetProfile = PROFILE_MAP[pkg] || pkg || '1-Hour-3Mbps';
+    const plan = store.getPlanById(targetProfile);
+    const price = plan ? plan.price : 100;
+    const expiresAt = calculateExpiry(targetProfile);
 
+    const newVouchers = [];
     for (let i = 0; i < qty; i++) {
         const code = generateVoucherCode();
-        // 1. Queue for router pull sync
+        // Queue for router pull sync
         queueUserForRouter(code, targetProfile, 'ADMIN_BATCH');
 
-        generatedVouchers.push({
+        const vObj = {
             code: code,
             profile: targetProfile,
-            price: PACKAGE_PRICES[pkg] || 100
-        });
+            price: price,
+            duration: plan?.duration || targetProfile,
+            created_at: new Date().toISOString(),
+            expires_at: expiresAt,
+            source: 'ADMIN_CASH',
+            status: 'active'
+        };
+        newVouchers.push(vObj);
 
-        // 2. Also attempt direct push in background
+        // Attempt direct push in background
         createMikrotikUser(code, code, targetProfile).catch(() => {});
     }
+
+    store.addVouchers(newVouchers);
 
     res.json({
         status: true,
         success: true,
-        count: generatedVouchers.length,
-        vouchers: generatedVouchers
+        count: newVouchers.length,
+        vouchers: newVouchers
     });
 });
 
-// -------------------------------------------------------------------
-// 5. ADMIN: ACTIVE SESSIONS MONITORING
-// -------------------------------------------------------------------
-app.get('/api/admin/active-users', async (req, res) => {
-    const pin = req.query.pin;
-
-    if (pin !== CONFIG.ADMIN_PIN) {
-        return res.status(401).json({ status: false, error: 'Unauthorized PIN' });
-    }
-
+// Admin: Active Sessions from MikroTik
+app.get('/api/admin/active-users', requireAdmin, async (req, res) => {
     try {
         const response = await mikrotikClient.get('/ip/hotspot/active');
         res.json({ status: true, users: response.data });
@@ -319,15 +511,27 @@ app.get('/api/admin/active-users', async (req, res) => {
     }
 });
 
-// -------------------------------------------------------------------
-// 6. ADMIN: VERIFY CUSTOMER PAYMENT BY REFERENCE
-// -------------------------------------------------------------------
-app.post('/api/admin/verify-payment', async (req, res) => {
-    const { pin, reference } = req.body;
-
-    if (pin !== CONFIG.ADMIN_PIN) {
-        return res.status(401).json({ status: false, error: 'Unauthorized PIN' });
+// Admin: Disconnect active hotspot session
+app.post('/api/admin/disconnect-user', requireAdmin, async (req, res) => {
+    const { id, user } = req.body;
+    try {
+        if (id) {
+            await mikrotikClient.delete(`/ip/hotspot/active/${id}`);
+        } else if (user) {
+            const findRes = await mikrotikClient.get(`/ip/hotspot/active?user=${encodeURIComponent(user)}`);
+            if (findRes.data && findRes.data.length > 0) {
+                await mikrotikClient.delete(`/ip/hotspot/active/${findRes.data[0]['.id']}`);
+            }
+        }
+        res.json({ status: true, success: true });
+    } catch (e) {
+        res.status(500).json({ status: false, error: e.message });
     }
+});
+
+// Admin: Verify Customer Payment by Reference
+app.post('/api/admin/verify-payment', requireAdmin, async (req, res) => {
+    const { reference } = req.body;
 
     if (!reference) {
         return res.status(400).json({ status: false, error: 'Missing reference' });
@@ -352,11 +556,59 @@ app.post('/api/admin/verify-payment', async (req, res) => {
 
         const pkg = data.metadata?.package || '1-Hour-3Mbps';
         const targetProfile = PROFILE_MAP[pkg] || '1-Hour-3Mbps';
-        // 1. Queue for router pull sync (bypasses CGNAT!)
-        queueUserForRouter(voucherCode, targetProfile, data.reference);
-        voucherStore.set(data.reference, voucherCode);
+        const customerPhone = data.metadata?.phone || data.customer?.phone || '';
+        const customerName = data.metadata?.name || data.authorization?.sender_name || data.customer?.first_name || 'Customer';
+        
+        let voucherCode;
+        let existingTx = store.getTransactions().find(t => t.reference === data.reference);
+        if (existingTx && existingTx.voucher) {
+            voucherCode = existingTx.voucher;
+        } else {
+            voucherCode = generateVoucherCode();
+        }
 
-        // 2. Also attempt direct push in background
+        const expiresAt = calculateExpiry(targetProfile);
+
+        // Save / Update in persistent storage
+        store.addTransaction({
+            reference: data.reference,
+            amount: data.amount / 100,
+            channel: data.channel || 'Paystack',
+            customer_name: customerName,
+            customer_email: data.customer?.email || '',
+            customer_phone: customerPhone,
+            package: pkg,
+            profile: targetProfile,
+            voucher: voucherCode,
+            status: 'success',
+            paid_at: data.paid_at || new Date().toISOString(),
+            expires_at: expiresAt,
+            whatsapp_sent: false
+        });
+
+        store.addVoucher({
+            code: voucherCode,
+            profile: targetProfile,
+            price: data.amount / 100,
+            duration: targetProfile,
+            created_at: new Date().toISOString(),
+            expires_at: expiresAt,
+            source: 'PAYSTACK',
+            status: 'active',
+            customer_phone: customerPhone,
+            reference: data.reference
+        });
+
+        // Queue for router sync
+        queueUserForRouter(voucherCode, targetProfile, data.reference);
+        voucherStore.set(data.reference, {
+            voucher: voucherCode,
+            profile: targetProfile,
+            expires_at: expiresAt,
+            phone: customerPhone
+        });
+
+        // Attempt direct push
         createMikrotikUser(voucherCode, voucherCode, targetProfile).catch(() => {});
 
         res.json({
@@ -366,11 +618,13 @@ app.post('/api/admin/verify-payment', async (req, res) => {
             amount: data.amount / 100,
             channel: data.channel,
             paid_at: data.paid_at,
-            customer_name: data.authorization?.sender_name || data.customer?.first_name || 'Customer',
+            customer_name: customerName,
             customer_email: data.customer?.email,
+            customer_phone: customerPhone,
             package: pkg,
             profile: targetProfile,
             voucher: voucherCode,
+            expires_at: expiresAt,
             routerProvisioned: true,
             routerError: null
         });
@@ -385,7 +639,7 @@ app.post('/api/admin/verify-payment', async (req, res) => {
 });
 
 // -------------------------------------------------------------------
-// 7. MIKROTIK ROUTER PULL SYNC (.RSC)
+// MIKROTIK ROUTER PULL SYNC (.RSC)
 // -------------------------------------------------------------------
 app.get('/api/router-sync.rsc', (req, res) => {
     const pin = req.query.pin;
@@ -412,10 +666,10 @@ app.get('/api/router-sync.rsc', (req, res) => {
 
 // Health check endpoint
 app.get('/', (req, res) => {
-    res.send('NovaLink Payment Bridge is online.');
+    res.send('NovaLink Payment Bridge & Admin Engine is online.');
 });
 
 // Start Server
 app.listen(CONFIG.PORT, () => {
-    console.log(`NovaLink Payment Bridge running on port ${CONFIG.PORT}`);
+    console.log(`NovaLink Payment Bridge & Admin Engine running on port ${CONFIG.PORT}`);
 });

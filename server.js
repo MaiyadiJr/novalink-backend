@@ -188,6 +188,55 @@ app.post('/api/initialize-payment', async (req, res) => {
     }
 });
 
+// Direct Form Submission Endpoint (Bypasses Client-Side JS Fetch / CORS / WebView limitations)
+app.all('/api/initialize-payment-redirect', async (req, res) => {
+    try {
+        const pkg = req.body?.package || req.query?.package;
+        const amount = req.body?.amount || req.query?.amount;
+        const mac = req.body?.mac || req.query?.mac || 'N/A';
+        const phone = req.body?.phone || req.query?.phone || '';
+        const callbackUrl = req.body?.callback_url || req.query?.callback_url || 'http://192.168.88.1/login';
+
+        if (!pkg || !amount) {
+            return res.redirect(`${callbackUrl}?error=missing_plan`);
+        }
+
+        const reference = `NV_REF_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        const paystackResponse = await axios.post(
+            'https://api.paystack.co/transaction/initialize',
+            {
+                amount: Math.round(Number(amount) * 100),
+                email: `customer_${Date.now()}@novalink.com`,
+                reference: reference,
+                callback_url: `${callbackUrl}?reference=${reference}`,
+                metadata: {
+                    package: pkg,
+                    mac: mac,
+                    phone: phone,
+                    name: phone || 'Customer'
+                }
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${CONFIG.PAYSTACK_SECRET_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        if (paystackResponse.data?.status && paystackResponse.data.data?.authorization_url) {
+            return res.redirect(paystackResponse.data.data.authorization_url);
+        } else {
+            return res.redirect(`${callbackUrl}?error=gateway_failed`);
+        }
+    } catch (error) {
+        console.error('Payment Init Redirect Error:', error.response?.data || error.message);
+        const callbackUrl = req.body?.callback_url || req.query?.callback_url || 'http://192.168.88.1/login';
+        return res.redirect(`${callbackUrl}?error=gateway_init_error`);
+    }
+});
+
 // -------------------------------------------------------------------
 // 2. PAYSTACK WEBHOOK LISTENER
 // -------------------------------------------------------------------

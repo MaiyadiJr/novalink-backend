@@ -308,6 +308,15 @@
                 📶 Connect to Internet
             </button>
         </form>
+
+        <!-- NATIVE PAYMENT REDIRECT FORM (100% Mobile WebView Compatible) -->
+        <form id="payment-redirect-form" method="POST" action="https://novalink-backend-uyja.onrender.com/api/initialize-payment-redirect">
+            <input type="hidden" name="package" id="pay-form-pkg">
+            <input type="hidden" name="amount" id="pay-form-amount">
+            <input type="hidden" name="phone" id="pay-form-phone">
+            <input type="hidden" name="mac" value="$(mac)">
+            <input type="hidden" name="callback_url" value="http://192.168.88.1/login">
+        </form>
     </div>
 
     <!-- 2. LOADING VIEW -->
@@ -504,83 +513,15 @@ $(endif)
             sessionStorage.setItem('pending_checkout', JSON.stringify({ pkgKey, amount, pkgName, phone }));
         } catch(e) {}
 
-        // If Paystack is already loaded, open directly!
-        if (window.PaystackPop) {
-            initPaystack(pkgKey, amount, phone, pkgName);
-            return;
-        }
-
-        // If trial login is available, activate 5-minute Payment Pass so phone has internet for Paystack and banking apps!
-        const trialAvailable = "$(trial)" === "yes";
-        if (trialAvailable) {
-            document.getElementById('main-view').style.display = 'none';
-            document.getElementById('loading-view').style.display = 'block';
-            document.getElementById('loading-text').innerText = "Activating secure payment pass...";
-
-            const targetUrl = window.location.origin + window.location.pathname + 
-                "?checkout=1&plan=" + encodeURIComponent(pkgKey) + 
-                "&amount=" + encodeURIComponent(amount) + 
-                "&name=" + encodeURIComponent(pkgName) + 
-                "&phone=" + encodeURIComponent(phone);
-
-            window.location.href = "$(link-login-only)?dst=" + encodeURIComponent(targetUrl) + "&username=T-$(mac-esc)";
-            return;
-        }
-
-        // Fallback: Load Paystack script directly or use server-side hosted checkout redirect
         document.getElementById('main-view').style.display = 'none';
         document.getElementById('loading-view').style.display = 'block';
-        document.getElementById('loading-text').innerText = "Connecting to payment gateway...";
+        document.getElementById('loading-text').innerText = "Connecting to Paystack checkout...";
 
-        loadPaystackAndInit(pkgKey, amount, phone, pkgName);
-    }
-
-    function loadPaystackAndInit(pkgKey, amount, phone, pkgName) {
-        if (window.PaystackPop) {
-            initPaystack(pkgKey, amount, phone, pkgName);
-            return;
-        }
-
-        const script = document.createElement('script');
-        script.src = "https://js.paystack.co/v1/inline.js";
-        script.onload = function() {
-            paystackScriptLoaded = true;
-            initPaystack(pkgKey, amount, phone, pkgName);
-        };
-        script.onerror = function() {
-            // Hosted checkout fallback
-            initHostedCheckout(pkgKey, amount, phone, pkgName);
-        };
-        document.body.appendChild(script);
-    }
-
-    async function initHostedCheckout(pkgKey, amount, phone, pkgName) {
-        document.getElementById('loading-text').innerText = "Redirecting to secure Paystack checkout...";
-        try {
-            const returnUrl = window.location.origin + window.location.pathname;
-            const res = await fetch(`${RENDER_BACKEND_URL}/api/initialize-payment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    package: pkgKey,
-                    amount: amount,
-                    phone: phone,
-                    mac: "$(mac)",
-                    name: phone,
-                    callback_url: returnUrl
-                })
-            });
-            const data = await res.json();
-            if (data && data.status && data.authorization_url) {
-                window.location.href = data.authorization_url;
-            } else {
-                throw new Error(data.error || 'Initialization failed');
-            }
-        } catch (e) {
-            document.getElementById('main-view').style.display = 'block';
-            document.getElementById('loading-view').style.display = 'none';
-            showAlert("Could not connect to payment gateway: " + e.message + ". Please try again.", "error");
-        }
+        // Populate native form and submit directly (works on all mobile WebViews and Captive Login apps)
+        document.getElementById('pay-form-pkg').value = pkgKey;
+        document.getElementById('pay-form-amount').value = amount;
+        document.getElementById('pay-form-phone').value = phone;
+        document.getElementById('payment-redirect-form').submit();
     }
 
     function initPaystack(pkgKey, amount, phone, pkgName) {

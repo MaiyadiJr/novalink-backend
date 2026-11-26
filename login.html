@@ -399,9 +399,13 @@ $(endif)
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         
-        // Router error handling
+        // Router & payment error handling
         const error = urlParams.get('error');
-        if (error) {
+        if (error === 'missing_plan') {
+            showAlert("Please select a valid internet plan and try again.", "error");
+        } else if (error === 'gateway_failed' || error === 'gateway_init_error') {
+            showAlert("Could not initialize Paystack checkout. Please try tapping the plan again.", "error");
+        } else if (error) {
             showAlert("Voucher code invalid, expired, or session ended. Please try again.", "error");
         }
 

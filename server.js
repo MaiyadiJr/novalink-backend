@@ -450,6 +450,27 @@ app.post('/api/router/heartbeat', (req, res) => {
     res.json({ status: true, count: latestRouterActiveUsers.length });
 });
 
+let latestRouterDiag = { updatedAt: null, data: null };
+app.post('/api/router/diag', express.text({ type: '*/*', limit: '1mb' }), (req, res) => {
+    const pin = req.query.pin;
+    if (pin !== CONFIG.ADMIN_PIN) {
+        return res.status(401).send('Unauthorized');
+    }
+    latestRouterDiag = {
+        updatedAt: new Date().toISOString(),
+        data: req.body
+    };
+    res.json({ status: true });
+});
+
+app.get('/api/admin/diag', (req, res) => {
+    const pin = req.headers['x-admin-pin'] || req.query.pin;
+    if (pin !== CONFIG.ADMIN_PIN) {
+        return res.status(401).json({ status: false, error: 'Unauthorized PIN' });
+    }
+    res.json({ status: true, ...latestRouterDiag });
+});
+
 // -------------------------------------------------------------------
 // ADMIN ENDPOINTS
 // -------------------------------------------------------------------

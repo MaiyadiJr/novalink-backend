@@ -731,6 +731,24 @@ app.post('/api/admin/verify-payment', requireAdmin, async (req, res) => {
 });
 
 // -------------------------------------------------------------------
+// WALL-CLOCK VOUCHER EXPIRY ENFORCEMENT
+// -------------------------------------------------------------------
+function sweepExpiredVouchers() {
+    const expiredCodes = store.expireOldVouchers();
+    if (expiredCodes.length > 0) {
+        expiredCodes.forEach(code => {
+            pendingRouterCommands.push(
+                `:do { /ip hotspot user remove [find where name="${code}"] } on-error={}; :do { /ip hotspot active remove [find where user="${code}"] } on-error={}; :do { /ip hotspot cookie remove [find where user="${code}"] } on-error={};`
+            );
+            latestRouterActiveUsers = latestRouterActiveUsers.filter(u => u.user !== code);
+        });
+        console.log(`[EXPIRY] Expired & queued router removal for: ${expiredCodes.join(', ')}`);
+    }
+}
+
+setInterval(sweepExpiredVouchers, 30000);
+
+// -------------------------------------------------------------------
 // MIKROTIK ROUTER PULL SYNC (.RSC)
 // -------------------------------------------------------------------
 app.get('/api/router-sync.rsc', (req, res) => {
@@ -738,6 +756,8 @@ app.get('/api/router-sync.rsc', (req, res) => {
     if (pin !== CONFIG.ADMIN_PIN) {
         return res.status(401).send('# Unauthorized PIN\r\n');
     }
+
+    sweepExpiredVouchers();
 
     if (pendingRouterUsers.length === 0 && pendingRouterCommands.length === 0) {
         res.setHeader('Content-Type', 'text/plain');
@@ -771,5 +791,6 @@ app.get('/', (req, res) => {
 
 // Start Server
 app.listen(CONFIG.PORT, () => {
+    sweepExpiredVouchers();
     console.log(`NovaLink Payment Bridge & Admin Engine running on port ${CONFIG.PORT}`);
 });

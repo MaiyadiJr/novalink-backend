@@ -198,6 +198,26 @@ class Store {
         return this.data.vouchers.length < before;
     }
 
+    expireOldVouchers() {
+        const now = Date.now();
+        const newlyExpired = [];
+        let changed = false;
+        this.data.vouchers.forEach(v => {
+            if (v.status === 'active' && v.expires_at) {
+                const expTime = new Date(v.expires_at).getTime();
+                if (!isNaN(expTime) && now >= expTime) {
+                    v.status = 'expired';
+                    newlyExpired.push(v.code);
+                    changed = true;
+                }
+            }
+        });
+        if (changed) {
+            this.save();
+        }
+        return newlyExpired;
+    }
+
     // --- STATS ---
     getStats() {
         const now = new Date();
